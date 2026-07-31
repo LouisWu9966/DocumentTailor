@@ -466,7 +466,7 @@
                     <ProgressBar x:Name="BusyProgress" Width="110" Height="3" IsIndeterminate="True"
                                  Visibility="Collapsed" Margin="16,0,0,0"/>
                 </StackPanel>
-                <TextBlock Grid.Column="2" Text="開發者 @Louis" Foreground="#7A8CA8"
+                <TextBlock Grid.Column="2" Text="資訊部 Louis" Foreground="#7A8CA8"
                            FontSize="10" VerticalAlignment="Center" Margin="14,0,16,0"/>
                 <Button Grid.Column="3" x:Name="CancelOperationButton" Content="取消作業"
                         Visibility="Collapsed" Click="CancelOperation_Click"
