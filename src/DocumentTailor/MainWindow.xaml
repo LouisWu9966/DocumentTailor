@@ -66,8 +66,6 @@
                             Background="Transparent" Foreground="#8293AE" BorderThickness="0" Padding="10,4"/>
                     <Button Content="合併" Tag="merge" Click="CompactNav_Click" ToolTip="PDF 合併"
                             Background="Transparent" Foreground="#8293AE" BorderThickness="0" Padding="10,4"/>
-                    <Button Content="整理" Tag="multipdf" Click="CompactNav_Click" ToolTip="多 PDF 整理"
-                            Background="Transparent" Foreground="#8293AE" BorderThickness="0" Padding="10,4"/>
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Content="—" Width="46" Background="Transparent" Foreground="#9EABC1"
@@ -103,8 +101,6 @@
                                     Click="Nav_Click" Content="◇   文件轉 Markdown"/>
                             <Button x:Name="NavMerge" Style="{StaticResource NavButton}"
                                     Click="Nav_Click" Content="⊞   PDF 合併"/>
-                            <Button x:Name="NavMultiPdf" Style="{StaticResource NavButton}"
-                                    Click="Nav_Click" Content="≡   多 PDF 整理"/>
                         </StackPanel>
                         <Border Grid.Row="3" Background="#111D2C" CornerRadius="12" Padding="14">
                             <StackPanel>
@@ -208,38 +204,28 @@
                                 </Border>
                             </Grid>
 
-                            <TextBlock Text="三個工作流，一個乾淨工作區" FontSize="22" FontWeight="SemiBold"
+                            <TextBlock Text="兩個核心工作流，一個乾淨工作區" FontSize="22" FontWeight="SemiBold"
                                        Margin="8,30,0,16"/>
                             <Grid Margin="0,0,0,20">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition/>
                                     <ColumnDefinition/>
-                                    <ColumnDefinition/>
                                 </Grid.ColumnDefinitions>
-                                <Border Margin="0,0,10,0" Background="#111B2A" BorderBrush="#22334D"
+                                <Border Margin="0,0,6,0" Background="#111B2A" BorderBrush="#22334D"
                                         BorderThickness="1" CornerRadius="16" Padding="20">
                                     <StackPanel>
                                         <TextBlock Text="01  FORMAT" Foreground="#57DEFA" FontSize="10" FontWeight="Bold"/>
-                                        <TextBlock Text="文件轉 Markdown" FontSize="17" FontWeight="SemiBold" Margin="0,13,0,8"/>
-                                        <TextBlock Text="DOCX、PDF、MSG、CSV、XLSX、TXT，保留標題、郵件欄位、清單與表格。"
+                                        <TextBlock Text="文件整理成 Markdown" FontSize="17" FontWeight="SemiBold" Margin="0,13,0,8"/>
+                                        <TextBlock Text="混合匯入 DOCX、PDF、MSG、CSV、XLSX、TXT，排序後彙整為一份 Markdown。"
                                                    Foreground="#8394B0" FontSize="12" TextWrapping="Wrap" LineHeight="20"/>
                                     </StackPanel>
                                 </Border>
-                                <Border Grid.Column="1" Margin="5,0" Background="#111B2A" BorderBrush="#22334D"
+                                <Border Grid.Column="1" Margin="6,0,0,0" Background="#111B2A" BorderBrush="#22334D"
                                         BorderThickness="1" CornerRadius="16" Padding="20">
                                     <StackPanel>
                                         <TextBlock Text="02  COMBINE" Foreground="#A98AFF" FontSize="10" FontWeight="Bold"/>
                                         <TextBlock Text="PDF 自由合併" FontSize="17" FontWeight="SemiBold" Margin="0,13,0,8"/>
                                         <TextBlock Text="拖放多份 PDF、調整順序，再輸出成單一文件。"
-                                                   Foreground="#8394B0" FontSize="12" TextWrapping="Wrap" LineHeight="20"/>
-                                    </StackPanel>
-                                </Border>
-                                <Border Grid.Column="2" Margin="10,0,0,0" Background="#111B2A" BorderBrush="#22334D"
-                                        BorderThickness="1" CornerRadius="16" Padding="20">
-                                    <StackPanel>
-                                        <TextBlock Text="03  ORGANIZE" Foreground="#52E2AE" FontSize="10" FontWeight="Bold"/>
-                                        <TextBlock Text="多 PDF 整理成 MD" FontSize="17" FontWeight="SemiBold" Margin="0,13,0,8"/>
-                                        <TextBlock Text="依指定順序擷取多份 PDF，建立章節並整合為一份 Markdown。"
                                                    Foreground="#8394B0" FontSize="12" TextWrapping="Wrap" LineHeight="20"/>
                                     </StackPanel>
                                 </Border>
@@ -256,7 +242,7 @@
                         <Grid Margin="4,0,4,20">
                             <StackPanel>
                                 <TextBlock Text="文件轉 Markdown" FontSize="30" FontWeight="SemiBold"/>
-                                <TextBlock Text="支援 DOCX、PDF、MSG、CSV、XLSX、XLSM、TXT；可多選並整合輸出。"
+                                <TextBlock Text="支援 DOCX、PDF、MSG、CSV、XLSX、XLSM、TXT；可多選、排序並整合輸出。"
                                            Foreground="#8495B1" FontSize="13" Margin="0,8,0,0"/>
                             </StackPanel>
                             <Button HorizontalAlignment="Right" VerticalAlignment="Center"
@@ -290,6 +276,10 @@
                                           Margin="0,14,0,8" SelectionMode="Single"/>
                                 <Grid Grid.Row="2">
                                     <StackPanel Orientation="Horizontal">
+                                        <Button Style="{StaticResource GhostButton}" Content="↑" Tag="convert:up"
+                                                Click="ListAction_Click" Margin="0,0,6,0" ToolTip="上移所選文件"/>
+                                        <Button Style="{StaticResource GhostButton}" Content="↓" Tag="convert:down"
+                                                Click="ListAction_Click" Margin="0,0,12,0" ToolTip="下移所選文件"/>
                                         <Button Style="{StaticResource GhostButton}" Content="移除" Tag="convert:remove"
                                                 Click="ListAction_Click" Margin="0,0,8,0"/>
                                         <Button Style="{StaticResource GhostButton}" Content="清空" Tag="convert:clear"
@@ -376,74 +366,6 @@
                         </Grid>
                     </Grid>
 
-                    <!-- Multi PDF page -->
-                    <Grid x:Name="MultiPdfPage" Visibility="Collapsed">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <Grid Margin="4,0,4,20">
-                            <StackPanel>
-                                <TextBlock Text="多 PDF 整理成 Markdown" FontSize="30" FontWeight="SemiBold"/>
-                                <TextBlock Text="擷取多份 PDF 文字，依順序建立章節並整合成一份 Markdown。"
-                                           Foreground="#8495B1" FontSize="13" Margin="0,8,0,0"/>
-                            </StackPanel>
-                            <Button HorizontalAlignment="Right" VerticalAlignment="Center"
-                                    Style="{StaticResource GhostButton}" Content="+ 加入 PDF"
-                                    Tag="multipdf" Click="AddFiles_Click"/>
-                        </Grid>
-                        <Grid x:Name="MultiPdfWorkspace" Grid.Row="1">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width=".95*"/>
-                                <ColumnDefinition Width="18"/>
-                                <ColumnDefinition x:Name="MultiPdfPreviewColumn" Width="1.05*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="94"/>
-                                    <RowDefinition Height="*"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-                                <Border x:Name="MultiPdfDropZone" Tag="multipdf" AllowDrop="True"
-                                        DragEnter="DropZone_DragEnter" DragLeave="DropZone_DragLeave" Drop="DropZone_Drop"
-                                        Background="#101B2A" BorderBrush="#31516A" BorderThickness="1" CornerRadius="15">
-                                    <TextBlock Text="⇣  拖放多份 PDF，清單順序就是章節順序"
-                                               Foreground="#8DDFF1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Border>
-                                <ListView Grid.Row="1" x:Name="MultiPdfList" ItemTemplate="{StaticResource FileTemplate}"
-                                          Margin="0,14,0,8" SelectionMode="Single"/>
-                                <Grid Grid.Row="2">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Button Style="{StaticResource GhostButton}" Content="↑" Tag="multipdf:up"
-                                                Click="ListAction_Click" Margin="0,0,6,0"/>
-                                        <Button Style="{StaticResource GhostButton}" Content="↓" Tag="multipdf:down"
-                                                Click="ListAction_Click" Margin="0,0,12,0"/>
-                                        <Button Style="{StaticResource GhostButton}" Content="移除" Tag="multipdf:remove"
-                                                Click="ListAction_Click" Margin="0,0,6,0"/>
-                                        <Button Style="{StaticResource GhostButton}" Content="清空" Tag="multipdf:clear"
-                                                Click="ListAction_Click"/>
-                                    </StackPanel>
-                                    <Button HorizontalAlignment="Right" Style="{StaticResource PrimaryButton}"
-                                            Content="整理並儲存 MD  →" Click="MultiPdf_Click"/>
-                                </Grid>
-                            </Grid>
-                            <Grid x:Name="MultiPdfPreviewPanel" Grid.Column="2">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="*"/>
-                                </Grid.RowDefinitions>
-                                <Grid Margin="4,0,4,10">
-                                    <TextBlock Text="COLLECTION PREVIEW" Foreground="#8093B2" FontSize="10"
-                                               FontWeight="Bold"/>
-                                    <TextBlock x:Name="MultiPdfPreviewMeta" Text="等待整理"
-                                               HorizontalAlignment="Right" Foreground="#7487A5" FontSize="10"/>
-                                </Grid>
-                                <TextBox Grid.Row="1" x:Name="MultiPdfPreview" IsReadOnly="True"
-                                         AcceptsReturn="True" TextWrapping="NoWrap"
-                                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
-                            </Grid>
-                        </Grid>
-                    </Grid>
                 </Grid>
             </Grid>
 

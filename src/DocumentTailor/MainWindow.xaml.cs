@@ -16,7 +16,6 @@ public partial class MainWindow : Window
 {
     private readonly ObservableCollection<DocumentItem> _convertFiles = [];
     private readonly ObservableCollection<DocumentItem> _mergeFiles = [];
-    private readonly ObservableCollection<DocumentItem> _multiPdfFiles = [];
     private readonly MarkdownService _markdownService = new();
     private readonly PdfMergeService _pdfMergeService = new();
     private readonly DispatcherTimer _heroTimer;
@@ -31,7 +30,6 @@ public partial class MainWindow : Window
         Height = Math.Max(MinHeight, Math.Min(820, SystemParameters.WorkArea.Height - 24));
         ConvertList.ItemsSource = _convertFiles;
         MergeList.ItemsSource = _mergeFiles;
-        MultiPdfList.ItemsSource = _multiPdfFiles;
 
         _heroTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(20) };
         _heroTimer.Tick += AnimateHero;
@@ -64,8 +62,6 @@ public partial class MainWindow : Window
         HomeVisualColumn.Width = singleColumn ? new GridLength(0) : new GridLength(.95, GridUnitType.Star);
         ConvertPreviewPanel.Visibility = singleColumn ? Visibility.Collapsed : Visibility.Visible;
         ConvertPreviewColumn.Width = singleColumn ? new GridLength(0) : new GridLength(1.05, GridUnitType.Star);
-        MultiPdfPreviewPanel.Visibility = singleColumn ? Visibility.Collapsed : Visibility.Visible;
-        MultiPdfPreviewColumn.Width = singleColumn ? new GridLength(0) : new GridLength(1.05, GridUnitType.Star);
     }
 
     private void Nav_Click(object sender, RoutedEventArgs e)
@@ -73,7 +69,6 @@ public partial class MainWindow : Window
         if (sender == NavHome) ShowPage("home");
         else if (sender == NavConvert) ShowPage("convert");
         else if (sender == NavMerge) ShowPage("merge");
-        else ShowPage("multipdf");
     }
 
     private void HomeAction_Click(object sender, RoutedEventArgs e)
@@ -86,16 +81,13 @@ public partial class MainWindow : Window
         HomePage.Visibility = page == "home" ? Visibility.Visible : Visibility.Collapsed;
         ConvertPage.Visibility = page == "convert" ? Visibility.Visible : Visibility.Collapsed;
         MergePage.Visibility = page == "merge" ? Visibility.Visible : Visibility.Collapsed;
-        MultiPdfPage.Visibility = page == "multipdf" ? Visibility.Visible : Visibility.Collapsed;
         NavHome.Tag = page == "home" ? "active" : null;
         NavConvert.Tag = page == "convert" ? "active" : null;
         NavMerge.Tag = page == "merge" ? "active" : null;
-        NavMultiPdf.Tag = page == "multipdf" ? "active" : null;
         WindowSectionTitle.Text = page switch
         {
             "convert" => "文件轉 Markdown",
             "merge" => "PDF 合併",
-            "multipdf" => "多 PDF 整理",
             _ => "首頁"
         };
     }
@@ -103,7 +95,7 @@ public partial class MainWindow : Window
     private void AddFiles_Click(object sender, RoutedEventArgs e)
     {
         if (_isBusy || sender is not Button { Tag: string mode }) return;
-        var onlyPdf = mode is "merge" or "multipdf";
+        var onlyPdf = mode == "merge";
         var dialog = new OpenFileDialog
         {
             Multiselect = true,
@@ -140,7 +132,7 @@ public partial class MainWindow : Window
     private void AddFiles(string mode, IEnumerable<string> paths)
     {
         var collection = GetCollection(mode);
-        var onlyPdf = mode is "merge" or "multipdf";
+        var onlyPdf = mode == "merge";
         var added = 0;
         var rejected = 0;
         foreach (var path in paths.Where(File.Exists))
@@ -220,28 +212,6 @@ public partial class MainWindow : Window
         });
     }
 
-    private async void MultiPdf_Click(object sender, RoutedEventArgs e)
-    {
-        if (_multiPdfFiles.Count == 0)
-        {
-            ShowWarning("請先加入 PDF。");
-            return;
-        }
-        var outputPath = AskMarkdownOutput($"PDF整理_{DateTime.Now:yyyyMMdd_HHmm}.md");
-        if (outputPath is null) return;
-
-        await RunOperationAsync(async (progress, token) =>
-        {
-            var title = Path.GetFileNameWithoutExtension(outputPath);
-            var markdown = await _markdownService.ConvertManyAsync(
-                _multiPdfFiles.Select(x => x.Path).ToList(), title, progress, token);
-            await File.WriteAllTextAsync(outputPath, markdown, new UTF8Encoding(false), token);
-            MultiPdfPreview.Text = markdown;
-            MultiPdfPreviewMeta.Text = $"{markdown.Length:N0} 字元 · {_multiPdfFiles.Count} 份 PDF";
-            SetStatus($"PDF 整理完成：{Path.GetFileName(outputPath)}", true);
-        });
-    }
-
     private async void Merge_Click(object sender, RoutedEventArgs e)
     {
         if (_mergeFiles.Count < 2)
@@ -315,19 +285,11 @@ public partial class MainWindow : Window
         return dialog.ShowDialog() == true ? dialog.FileName : null;
     }
 
-    private ObservableCollection<DocumentItem> GetCollection(string mode) => mode switch
-    {
-        "merge" => _mergeFiles,
-        "multipdf" => _multiPdfFiles,
-        _ => _convertFiles
-    };
+    private ObservableCollection<DocumentItem> GetCollection(string mode) =>
+        mode == "merge" ? _mergeFiles : _convertFiles;
 
-    private ListView GetList(string mode) => mode switch
-    {
-        "merge" => MergeList,
-        "multipdf" => MultiPdfList,
-        _ => ConvertList
-    };
+    private ListView GetList(string mode) =>
+        mode == "merge" ? MergeList : ConvertList;
 
     private void CancelOperation_Click(object sender, RoutedEventArgs e) => _operationCancellation?.Cancel();
 
