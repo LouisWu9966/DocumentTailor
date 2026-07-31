@@ -1,4 +1,5 @@
 using MsgReader.Outlook;
+using RtfPipe;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -9,6 +10,11 @@ namespace DocumentTailor.Services;
 
 public sealed class MsgMarkdownConverter
 {
+    static MsgMarkdownConverter()
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+    }
+
     public Task<string> ConvertAsync(string path, CancellationToken cancellationToken = default)
         => Task.Run(() => Convert(path, cancellationToken), cancellationToken);
 
@@ -47,6 +53,8 @@ public sealed class MsgMarkdownConverter
         var body = NormalizeTextBody(message.BodyText);
         if (string.IsNullOrWhiteSpace(body) && !string.IsNullOrWhiteSpace(message.BodyHtml))
             body = HtmlToMarkdown(message.BodyHtml);
+        if (string.IsNullOrWhiteSpace(body) && !string.IsNullOrWhiteSpace(message.BodyRtf))
+            body = HtmlToMarkdown(Rtf.ToHtml(message.BodyRtf));
         output.AppendLine(string.IsNullOrWhiteSpace(body) ? "> 此郵件沒有可讀取的本文。" : body.Trim());
         output.AppendLine();
 

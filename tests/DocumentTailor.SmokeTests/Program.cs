@@ -9,6 +9,11 @@ using System.Text;
 var artifactRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "artifacts", "smoke"));
 Directory.CreateDirectory(artifactRoot);
 
+var rtfOnlyMsg = Path.Combine(artifactRoot, "mail-rtf-only.msg");
+CreateRtfOnlyMsgSample(rtfOnlyMsg);
+var rtfOnlyMarkdown = await new MsgMarkdownConverter().ConvertAsync(rtfOnlyMsg);
+AssertContains(rtfOnlyMarkdown, "RTF only body", "RTF-only MSG 本文");
+
 var csvPath = Path.Combine(artifactRoot, "sample.csv");
 await File.WriteAllTextAsync(csvPath,
     "姓名,備註,數量\r\n王小明,\"含,逗號\",2\r\n李小華,\"含\"\"引號\"\"與\n換行\",3",
@@ -129,5 +134,17 @@ static void CreateMsgSample(string path, string subject, string body, string? at
     email.BodyHtml = $"<html><body><p>{body}</p><p><b>這是第二段。</b></p></body></html>";
     email.SentOn = new DateTime(2026, 7, 31, 9, 30, 0, DateTimeKind.Local);
     if (attachmentPath is not null) email.Attachments.Add(attachmentPath);
+    email.Save(path);
+}
+
+static void CreateRtfOnlyMsgSample(string path)
+{
+    using var email = new MsgKit.Email(
+        new MsgKit.Sender("sender@example.com", "RTF Sender"),
+        new MsgKit.Representing("sender@example.com", "RTF Sender"),
+        "RTF-only message");
+    email.Recipients.AddTo("receiver@example.com", "RTF Receiver");
+    email.BodyRtf = @"{\rtf1\ansi\ansicpg1252\deff0{\fonttbl{\f0\fnil\fcharset0 Arial;}}\viewkind4\uc1\pard\f0\fs20 RTF only body\par}";
+    email.BodyRtfCompressed = true;
     email.Save(path);
 }
