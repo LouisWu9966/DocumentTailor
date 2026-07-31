@@ -282,7 +282,7 @@
                                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                                         <TextBlock Text="⇣" Foreground="#4DE0FF" FontSize="25" HorizontalAlignment="Center"/>
                                         <TextBlock Text="拖放文件到這裡" FontWeight="SemiBold" FontSize="14" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="或使用右上方「加入文件」" Foreground="#8496B3" FontSize="11"
+                                        <TextBlock Text="也可從 Classic Outlook 直接拖入一封或多封信件" Foreground="#A4B4CC" FontSize="11"
                                                    HorizontalAlignment="Center" Margin="0,5,0,0"/>
                                     </StackPanel>
                                 </Border>
@@ -459,7 +459,7 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="v1.1.0" Foreground="#8FA0BB" Margin="20,0" VerticalAlignment="Center" FontSize="10"/>
+                <TextBlock Text="v1.2.0" Foreground="#8FA0BB" Margin="20,0" VerticalAlignment="Center" FontSize="10"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <Ellipse x:Name="StatusDot" Width="6" Height="6" Fill="#42E49A" Margin="14,0,8,0"/>
                     <TextBlock x:Name="StatusText" Text="準備完成" Foreground="#7889A5" FontSize="10"/>

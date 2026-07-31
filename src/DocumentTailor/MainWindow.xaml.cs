@@ -3,6 +3,7 @@ using DocumentTailor.Services;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -19,6 +20,7 @@ public partial class MainWindow : Window
     private readonly MarkdownService _markdownService = new();
     private readonly MarkdownExportService _markdownExportService = new();
     private readonly PdfMergeService _pdfMergeService = new();
+    private readonly OutlookDropService _outlookDropService = new();
     private readonly DispatcherTimer _heroTimer;
     private CancellationTokenSource? _operationCancellation;
     private DocumentItem? _draggedListItem;
@@ -45,6 +47,7 @@ public partial class MainWindow : Window
         {
             _heroTimer.Stop();
             _operationCancellation?.Cancel();
+            _outlookDropService.Dispose();
         };
     }
 
@@ -119,9 +122,12 @@ public partial class MainWindow : Window
     private void DropZone_DragEnter(object sender, DragEventArgs e)
     {
         var acceptsFiles = e.Data.GetDataPresent(DataFormats.FileDrop);
-        e.Effects = acceptsFiles && !_isBusy ? DragDropEffects.Copy : DragDropEffects.None;
+        var acceptsOutlook = sender is Border { Tag: "convert" } &&
+            OutlookDropService.HasVirtualFiles(e.Data);
+        var acceptsDrop = acceptsFiles || acceptsOutlook;
+        e.Effects = acceptsDrop && !_isBusy ? DragDropEffects.Copy : DragDropEffects.None;
         if (sender is Border border) border.BorderBrush = new SolidColorBrush(
-            acceptsFiles ? Color.FromRgb(40, 215, 255) : Color.FromRgb(120, 60, 80));
+            acceptsDrop ? Color.FromRgb(40, 215, 255) : Color.FromRgb(120, 60, 80));
         e.Handled = true;
     }
 
@@ -133,9 +139,28 @@ public partial class MainWindow : Window
     private void DropZone_Drop(object sender, DragEventArgs e)
     {
         DropZone_DragLeave(sender, e);
-        if (_isBusy || sender is not Border { Tag: string mode } ||
-            e.Data.GetData(DataFormats.FileDrop) is not string[] paths) return;
-        AddFiles(mode, paths);
+        if (_isBusy || sender is not Border { Tag: string mode }) return;
+        if (e.Data.GetData(DataFormats.FileDrop) is string[] paths)
+        {
+            AddFiles(mode, paths);
+            return;
+        }
+        if (mode != "convert" || !OutlookDropService.HasVirtualFiles(e.Data)) return;
+
+        try
+        {
+            var messages = _outlookDropService.ExtractMsgFiles(e.Data);
+            AddFiles(mode, messages);
+            SetStatus($"已從 Outlook 匯入 {messages.Count} 封信件，目前共 {_convertFiles.Count} 份文件");
+        }
+        catch (Exception ex) when (ex is InvalidDataException or
+                                   NotSupportedException or COMException or
+                                   IOException or UnauthorizedAccessException)
+        {
+            SetStatus("Outlook 信件拖曳匯入失敗");
+            MessageBox.Show(ex.Message, "無法匯入 Outlook 信件",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+        }
     }
 
     private void AddFiles(string mode, IEnumerable<string> paths)

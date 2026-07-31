@@ -7,6 +7,8 @@ using PdfSharpCore.Pdf;
 using PdfSharpCore.Pdf.IO;
 using System.Globalization;
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using System.Threading;
 using System.Windows;
@@ -95,6 +97,24 @@ AssertContains(cleanedMsgMarkdown, "請依附件新版規格報價", "MSG 實檔
 AssertNotContains(cleanedMsgMarkdown, "Vendor Sales Team", "MSG 實檔清理移除簽名");
 AssertNotContains(cleanedMsgMarkdown, "先前已經讀過", "MSG 實檔清理移除引用");
 
+var outlookDropData = new FakeOutlookDataObject(
+    ["Outlook 拖曳一.msg", "Outlook 拖曳二.msg"],
+    [await File.ReadAllBytesAsync(msgOne), await File.ReadAllBytesAsync(msgTwo)]);
+IReadOnlyList<string> droppedMessages;
+using (var outlookDrop = new OutlookDropService())
+{
+    droppedMessages = outlookDrop.ExtractMsgFiles(outlookDropData);
+    if (droppedMessages.Count != 2)
+        throw new InvalidOperationException(
+            $"Outlook 多選拖曳失敗：預期 2 封，實際 {droppedMessages.Count} 封。");
+    var droppedMarkdown = await new MarkdownService().ConvertManyAsync(
+        droppedMessages, "Outlook 直接拖曳");
+    AssertContains(droppedMarkdown, "專案進度更新", "Outlook 拖曳第一封");
+    AssertContains(droppedMarkdown, "會議確認", "Outlook 拖曳第二封");
+}
+if (droppedMessages.Any(File.Exists))
+    throw new InvalidOperationException("Outlook 拖曳暫存檔未在服務結束後清除。");
+
 var combinedMsg = await new MarkdownService().ConvertManyAsync(
     [msgOne, msgTwo], "Outlook 郵件彙整");
 AssertContains(combinedMsg, "# Outlook 郵件彙整", "多 MSG 彙整標題");
@@ -170,7 +190,7 @@ using (var exportedPortableDocument = PdfReader.Open(exportedPdf, PdfDocumentOpe
     if (exportedPortableDocument.PageCount < 1)
         throw new InvalidOperationException("Markdown 匯出 PDF 失敗：沒有頁面。");
 
-Console.WriteLine("PASS: OCR / MSG 清理 / CSV / Excel / Word / PDF 轉換、Markdown 再輸出、多文件彙整與 PDF 合併測試全部通過。");
+Console.WriteLine("PASS: OCR / Outlook 拖曳 / MSG 清理 / CSV / Excel / Word / PDF 轉換、Markdown 再輸出、多文件彙整與 PDF 合併測試全部通過。");
 Console.WriteLine($"Artifacts: {artifactRoot}");
 
 static void AssertContains(string actual, string expected, string label)
@@ -296,4 +316,134 @@ static void CreateRtfOnlyMsgSample(string path)
     email.BodyRtf = @"{\rtf1\ansi\ansicpg1252\deff0{\fonttbl{\f0\fnil\fcharset0 Arial;}}\viewkind4\uc1\pard\f0\fs20 RTF only body\par}";
     email.BodyRtfCompressed = true;
     email.Save(path);
+}
+
+sealed class FakeOutlookDataObject :
+    System.Windows.IDataObject,
+    System.Runtime.InteropServices.ComTypes.IDataObject
+{
+    private const string DescriptorFormat = "FileGroupDescriptorW";
+    private const string ContentsFormat = "FileContents";
+    private const int DescriptorSize = 592;
+    private readonly string[] _names;
+    private readonly byte[][] _contents;
+
+    public FakeOutlookDataObject(string[] names, byte[][] contents)
+    {
+        _names = names;
+        _contents = contents;
+    }
+
+    public object GetData(string format) => GetData(format, true);
+
+    public object GetData(string format, bool autoConvert) =>
+        format == DescriptorFormat
+            ? new MemoryStream(CreateDescriptors(_names))
+            : throw new NotSupportedException(format);
+
+    public object GetData(Type format) => throw new NotSupportedException(format.FullName);
+
+    public bool GetDataPresent(string format) => GetDataPresent(format, true);
+
+    public bool GetDataPresent(string format, bool autoConvert) =>
+        format is DescriptorFormat or ContentsFormat;
+
+    public bool GetDataPresent(Type format) => false;
+
+    public string[] GetFormats() => GetFormats(true);
+
+    public string[] GetFormats(bool autoConvert) => [DescriptorFormat, ContentsFormat];
+
+    public void SetData(object data) => throw new NotSupportedException();
+
+    public void SetData(string format, object data) => throw new NotSupportedException();
+
+    public void SetData(string format, object data, bool autoConvert) =>
+        throw new NotSupportedException();
+
+    public void SetData(Type format, object data) => throw new NotSupportedException();
+
+    void System.Runtime.InteropServices.ComTypes.IDataObject.GetData(
+        ref FORMATETC format, out STGMEDIUM medium)
+    {
+        if (format.lindex < 0 || format.lindex >= _contents.Length)
+            throw new COMException("Invalid virtual file index.");
+        var bytes = _contents[format.lindex];
+        var handle = GlobalAlloc(0x0042, new UIntPtr((uint)bytes.Length));
+        if (handle == IntPtr.Zero) throw new OutOfMemoryException();
+        var pointer = GlobalLock(handle);
+        try
+        {
+            Marshal.Copy(bytes, 0, pointer, bytes.Length);
+        }
+        finally
+        {
+            GlobalUnlock(handle);
+        }
+        medium = new STGMEDIUM
+        {
+            tymed = TYMED.TYMED_HGLOBAL,
+            unionmember = handle,
+            pUnkForRelease = null
+        };
+    }
+
+    void System.Runtime.InteropServices.ComTypes.IDataObject.GetDataHere(
+        ref FORMATETC format, ref STGMEDIUM medium) =>
+        throw new NotSupportedException();
+
+    int System.Runtime.InteropServices.ComTypes.IDataObject.QueryGetData(ref FORMATETC format) => 0;
+
+    int System.Runtime.InteropServices.ComTypes.IDataObject.GetCanonicalFormatEtc(
+        ref FORMATETC formatIn, out FORMATETC formatOut)
+    {
+        formatOut = formatIn;
+        return 1;
+    }
+
+    void System.Runtime.InteropServices.ComTypes.IDataObject.SetData(
+        ref FORMATETC formatIn, ref STGMEDIUM medium, bool release) =>
+        throw new NotSupportedException();
+
+    IEnumFORMATETC System.Runtime.InteropServices.ComTypes.IDataObject.EnumFormatEtc(
+        DATADIR direction) => throw new NotSupportedException();
+
+    int System.Runtime.InteropServices.ComTypes.IDataObject.DAdvise(
+        ref FORMATETC format, ADVF flags, IAdviseSink adviseSink, out int connection)
+    {
+        connection = 0;
+        return 1;
+    }
+
+    void System.Runtime.InteropServices.ComTypes.IDataObject.DUnadvise(int connection)
+        => throw new NotSupportedException();
+
+    int System.Runtime.InteropServices.ComTypes.IDataObject.EnumDAdvise(
+        out IEnumSTATDATA? enumAdvise)
+    {
+        enumAdvise = null;
+        return 1;
+    }
+
+    private static byte[] CreateDescriptors(IReadOnlyList<string> names)
+    {
+        var bytes = new byte[sizeof(int) + names.Count * DescriptorSize];
+        BitConverter.GetBytes(names.Count).CopyTo(bytes, 0);
+        for (var index = 0; index < names.Count; index++)
+        {
+            var nameBytes = Encoding.Unicode.GetBytes(names[index] + "\0");
+            var offset = sizeof(int) + index * DescriptorSize + 72;
+            Buffer.BlockCopy(nameBytes, 0, bytes, offset, Math.Min(nameBytes.Length, 520));
+        }
+        return bytes;
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr GlobalAlloc(uint flags, UIntPtr bytes);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr GlobalLock(IntPtr handle);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool GlobalUnlock(IntPtr handle);
 }

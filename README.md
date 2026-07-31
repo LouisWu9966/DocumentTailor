@@ -10,6 +10,7 @@
 - 掃描 PDF 與 PNG、JPEG、BMP、TIFF 圖片使用 Windows 離線 OCR 辨識；含文字層的 PDF 只對無文字頁執行 OCR。
 - 一次選取多份不同格式的文件，以拖曳或按鈕調整順序，再彙整成單一 Markdown。
 - 多份 Outlook MSG 可依主旨建立章節，保留郵件中繼資料與附件清單，並自動排除常見簽名、重複引用和中英文免責聲明。
+- Classic Outlook 可將一封或多封郵件直接拖入工具，不需先手動另存 `.msg`。
 - Markdown 可再次輸出成響應式離線 HTML、可編輯 DOCX 或適合定稿列印的 PDF。
 - 多份 PDF 也能直接合併成一份 PDF。
 - 支援拖放匯入、清單排序、進度提示、取消作業及 Markdown 預覽／編輯。
@@ -41,6 +42,8 @@ Markdown 再輸出支援 `.html`、`.docx` 與 `.pdf`。
 5. 選擇輸出的 `.md` 路徑。
 
 多選 `.msg` 時，每封郵件會以主旨建立獨立章節，再彙整成同一份 Markdown。轉換器會在郵件本文中辨識 Outlook／常見郵件引用區塊、簽名結尾、行動裝置簽名與免責聲明；正文仍會保留。
+
+使用 Classic Outlook 時，也可以在郵件清單中選取一封或多封郵件，直接拖到「文件轉 Markdown」的匯入區。工具會將 Outlook 提供的虛擬信件複製到該程式執行個體專用的暫存目錄，程式關閉後自動清除，因此多人從網路磁碟同時執行時不會共用暫存信件。
 
 ### 掃描 PDF／圖片 OCR
 
@@ -94,7 +97,7 @@ dotnet publish .\src\DocumentTailor\DocumentTailor.csproj `
 
 ## 執行煙霧測試
 
-測試會建立實際的 OCR 圖片、掃描 PDF、DOCX、MSG、CSV 與 Excel 樣本，驗證 OCR、郵件長尾清理、格式轉換、Markdown 三種再輸出、多文件彙整及 PDF 合併頁數。
+測試會建立實際的 OCR 圖片、掃描 PDF、DOCX、MSG、CSV 與 Excel 樣本，並模擬 Outlook 多選虛擬檔案拖放，驗證 OCR、郵件長尾清理、格式轉換、Markdown 三種再輸出、多文件彙整及 PDF 合併頁數。
 
 ```powershell
 dotnet run --project .\tests\DocumentTailor.SmokeTests\DocumentTailor.SmokeTests.csproj -c Release
@@ -116,6 +119,7 @@ DocumentTailor/
 
 - Excel 支援 `.xlsx` 與 `.xlsm`，暫不支援舊式 `.xls`。
 - MSG 附件會列出檔名，但不會自動解壓或另存附件；郵件長尾清理採規則辨識，特殊格式仍可能需要人工微調。
+- Outlook 直接拖曳使用 Windows `FileGroupDescriptorW`／`FileContents` 虛擬檔案格式，支援 Classic Outlook；新版 Outlook 若未提供這些格式，請先另存為 `.msg` 再匯入。
 - OCR 品質受掃描解析度、傾斜、背景雜訊與 Windows 已安裝語言影響。
 - PDF 的複雜多欄版面、手寫內容或圖片式表格，可能需要人工調整 Markdown。
 
