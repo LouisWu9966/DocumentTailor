@@ -86,16 +86,83 @@ var vendorTail = """
     """;
 var cleanedVendorTail = EmailBodyCleaner.Clean(vendorTail);
 AssertContains(cleanedVendorTail, "請依附件新版規格報價", "MSG 長尾清理保留本文");
-AssertNotContains(cleanedVendorTail, "Vendor Sales Team", "MSG 長尾清理移除簽名");
-AssertNotContains(cleanedVendorTail, "先前已經讀過", "MSG 長尾清理移除引用");
+AssertNotContains(cleanedVendorTail, "Tel: +886 2 2345 6789", "MSG 長尾清理移除簽名");
+AssertContains(cleanedVendorTail, "先前已經讀過", "MSG 長尾清理保留歷史引用");
 AssertNotContains(cleanedVendorTail, "CONFIDENTIALITY", "MSG 長尾清理移除免責聲明");
 
 var cleanedMsg = Path.Combine(artifactRoot, "mail-cleaned.msg");
 CreateMsgSample(cleanedMsg, "供應商報價", vendorTail, null);
 var cleanedMsgMarkdown = await new MsgMarkdownConverter().ConvertAsync(cleanedMsg);
 AssertContains(cleanedMsgMarkdown, "請依附件新版規格報價", "MSG 實檔清理保留本文");
-AssertNotContains(cleanedMsgMarkdown, "Vendor Sales Team", "MSG 實檔清理移除簽名");
-AssertNotContains(cleanedMsgMarkdown, "先前已經讀過", "MSG 實檔清理移除引用");
+AssertNotContains(cleanedMsgMarkdown, "Tel: +886 2 2345 6789", "MSG 實檔清理移除簽名");
+AssertContains(cleanedMsgMarkdown, "先前已經讀過", "MSG 實檔清理保留歷史引用");
+
+var longDiscussion = """
+    最新決議：請依第二版圖面製作，數量維持 120 件。
+
+    Best regards,
+    Alice Chen
+    alice@example.com
+
+    From: Bob Lee <bob@example.com>
+    Sent: Wednesday, July 29, 2026 10:30 AM
+    To: Alice Chen <alice@example.com>
+    Subject: RE: 模具修改討論
+
+    前一輪的重要結論：尺寸公差必須維持正負 0.02 mm。
+    這段歷史討論不能因為前一封信有簽名而消失。
+
+    Thanks,
+    Bob Lee
+    Tel: +886 2 2222 3333
+
+    -----Original Message-----
+    From: Carol Lin <carol@example.com>
+    Sent: Tuesday, July 28, 2026 3:00 PM
+    To: Bob Lee <bob@example.com>
+    Subject: 模具修改討論
+
+    最早提出的需求：材料必須使用 SUS304，並附材質證明。
+
+    謝謝
+    這裡的「謝謝」是討論正文，不是簽名起點。
+    後面的交期資訊也必須保留到 Markdown。
+
+    免責聲明：本郵件及其附件僅供指定收件人使用。
+    不應出現在輸出中的法律文字。
+    """;
+var cleanedLongDiscussion = EmailBodyCleaner.Clean(longDiscussion);
+await File.WriteAllTextAsync(
+    Path.Combine(artifactRoot, "email-cleaning-long-thread.md"),
+    cleanedLongDiscussion, new UTF8Encoding(false));
+AssertContains(cleanedLongDiscussion, "最新決議", "長討論串保留最新回覆");
+AssertContains(cleanedLongDiscussion, "尺寸公差必須維持正負 0.02 mm", "長討論串保留中段正文");
+AssertContains(cleanedLongDiscussion, "材料必須使用 SUS304", "長討論串保留最早正文");
+AssertContains(cleanedLongDiscussion, "後面的交期資訊也必須保留", "正文中的謝謝不截斷內容");
+AssertNotContains(cleanedLongDiscussion, "Alice Chen\nalice@example.com", "長討論串移除第一段簽名");
+AssertNotContains(cleanedLongDiscussion, "Bob Lee\nTel:", "長討論串移除第二段簽名");
+AssertNotContains(cleanedLongDiscussion, "不應出現在輸出中的法律文字", "長討論串移除免責聲明");
+
+var quotedDiscussion = EmailBodyCleaner.Clean("""
+    最新回覆內容。
+
+    On Tuesday, July 28, 2026, Carol wrote:
+    > 第一層引用的重要內容。
+    >> 更早一層仍需保留的技術決議。
+    """);
+AssertContains(quotedDiscussion, "第一層引用的重要內容", "保留大於符號引用正文");
+AssertContains(quotedDiscussion, "更早一層仍需保留的技術決議", "保留巢狀引用正文");
+
+var longDiscussionMsg = Path.Combine(artifactRoot, "mail-long-discussion.msg");
+CreateMsgSample(longDiscussionMsg, "模具修改長討論", longDiscussion, null);
+var longDiscussionMarkdown = await new MsgMarkdownConverter().ConvertAsync(longDiscussionMsg);
+await File.WriteAllTextAsync(
+    Path.Combine(artifactRoot, "mail-long-discussion-output.md"),
+    longDiscussionMarkdown, new UTF8Encoding(false));
+AssertContains(longDiscussionMarkdown, "最新決議", "MSG 長討論實檔保留最新回覆");
+AssertContains(longDiscussionMarkdown, "尺寸公差必須維持正負 0.02 mm", "MSG 長討論實檔保留中段正文");
+AssertContains(longDiscussionMarkdown, "材料必須使用 SUS304", "MSG 長討論實檔保留最早正文");
+AssertContains(longDiscussionMarkdown, "後面的交期資訊也必須保留", "MSG 長討論實檔不誤判謝謝");
 
 var outlookDropData = new FakeOutlookDataObject(
     ["Outlook 拖曳一.msg", "Outlook 拖曳二.msg"],

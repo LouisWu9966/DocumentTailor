@@ -46,16 +46,66 @@ public static partial class EmailBodyCleaner
             .Replace("\u200B", string.Empty)
             .Replace("\uFEFF", string.Empty);
         var lines = normalized.Split('\n').Select(line => line.TrimEnd()).ToList();
+        var segments = SplitConversation(lines);
+        var cleanedSegments = new List<string>();
+        foreach (var segment in segments)
+        {
+            TruncateAtDisclaimer(segment);
+            TruncateAtSignature(segment);
+            var value = string.Join("\n", segment).Trim();
+            if (value.Length > 0) cleanedSegments.Add(value);
+        }
 
-        TruncateAtDisclaimer(lines);
-        TruncateAtQuotedReply(lines);
-        RemoveQuotedLines(lines);
-        TruncateAtSignature(lines);
-
-        var cleaned = string.Join("\n", lines).Trim();
+        var cleaned = string.Join("\n\n---\n\n", cleanedSegments);
         cleaned = TrailingWhitespaceRegex().Replace(cleaned, "\n");
         cleaned = ExcessBlankLinesRegex().Replace(cleaned, "\n\n");
         return cleaned;
+    }
+
+    private static IReadOnlyList<List<string>> SplitConversation(IReadOnlyList<string> lines)
+    {
+        var segments = new List<List<string>>();
+        var current = new List<string>();
+
+        void StartNextSegment()
+        {
+            TrimEmptyLines(current);
+            if (current.Count > 0) segments.Add(current);
+            current = [];
+        }
+
+        for (var index = 0; index < lines.Count; index++)
+        {
+            var line = lines[index];
+            var unquoted = StripQuotePrefix(line);
+            if (OriginalMessageSeparatorRegex().IsMatch(unquoted))
+            {
+                StartNextSegment();
+                continue;
+            }
+            if (OnWroteRegex().IsMatch(unquoted) ||
+                ChineseWroteRegex().IsMatch(unquoted))
+            {
+                StartNextSegment();
+                current.Add(unquoted);
+                continue;
+            }
+
+            if (IsOutlookHeaderBlock(lines, index))
+            {
+                StartNextSegment();
+                var headerEnd = FindOutlookHeaderEnd(lines, index);
+                for (; index <= headerEnd; index++)
+                    current.Add(StripQuotePrefix(lines[index]));
+                index--;
+                continue;
+            }
+
+            current.Add(unquoted);
+        }
+
+        StartNextSegment();
+        return segments;
     }
 
     private static void TruncateAtDisclaimer(List<string> lines)
@@ -63,23 +113,7 @@ public static partial class EmailBodyCleaner
         for (var i = 0; i < lines.Count; i++)
         {
             var candidate = NormalizeForMatch(lines[i]);
-            if (i > 0 && DisclaimerMarkers.Any(candidate.Contains))
-            {
-                lines.RemoveRange(i, lines.Count - i);
-                return;
-            }
-        }
-    }
-
-    private static void TruncateAtQuotedReply(List<string> lines)
-    {
-        for (var i = 1; i < lines.Count; i++)
-        {
-            var line = lines[i].Trim();
-            if (OriginalMessageSeparatorRegex().IsMatch(line) ||
-                OnWroteRegex().IsMatch(line) ||
-                ChineseWroteRegex().IsMatch(line) ||
-                IsOutlookHeaderBlock(lines, i))
+            if (DisclaimerMarkers.Any(candidate.Contains))
             {
                 lines.RemoveRange(i, lines.Count - i);
                 return;
@@ -89,41 +123,45 @@ public static partial class EmailBodyCleaner
 
     private static bool IsOutlookHeaderBlock(IReadOnlyList<string> lines, int index)
     {
-        var first = lines[index].Trim();
+        var first = StripQuotePrefix(lines[index]);
         if (!FromHeaderRegex().IsMatch(first)) return false;
 
-        var nearby = string.Join("\n", lines.Skip(index).Take(7));
+        var nearby = string.Join("\n", lines.Skip(index).Take(7).Select(StripQuotePrefix));
         return SentHeaderRegex().IsMatch(nearby) &&
                ToHeaderRegex().IsMatch(nearby) &&
                SubjectHeaderRegex().IsMatch(nearby);
     }
 
-    private static void RemoveQuotedLines(List<string> lines)
+    private static int FindOutlookHeaderEnd(IReadOnlyList<string> lines, int start)
     {
-        for (var i = lines.Count - 1; i >= 0; i--)
+        var end = Math.Min(lines.Count - 1, start + 6);
+        for (var index = start; index <= end; index++)
         {
-            if (QuotedLineRegex().IsMatch(lines[i]))
-                lines.RemoveAt(i);
+            if (SubjectHeaderRegex().IsMatch(StripQuotePrefix(lines[index])))
+                return index;
         }
+        return start;
     }
 
     private static void TruncateAtSignature(List<string> lines)
     {
-        for (var i = 1; i < lines.Count; i++)
+        var searchStart = Math.Max(1, lines.Count - 30);
+        for (var i = searchStart; i < lines.Count; i++)
         {
             var candidate = NormalizeForMatch(lines[i]);
-            if (SignatureDelimiterRegex().IsMatch(lines[i].Trim()) ||
-                MobileSignatureMarkers.Any(candidate.Contains))
+            if (MobileSignatureMarkers.Any(candidate.Contains) ||
+                (SignatureDelimiterRegex().IsMatch(lines[i].Trim()) &&
+                 HasStrongSignatureEvidence(lines, i + 1)))
             {
                 lines.RemoveRange(i, lines.Count - i);
                 return;
             }
         }
 
-        var searchStart = Math.Max(1, lines.Count - 12);
         for (var i = searchStart; i < lines.Count; i++)
         {
-            if (!ValedictionRegex().IsMatch(lines[i].Trim()) || !HasSignatureContent(lines, i + 1))
+            if (!ValedictionRegex().IsMatch(lines[i].Trim()) ||
+                !HasStrongSignatureEvidence(lines, i + 1))
                 continue;
 
             lines.RemoveRange(i, lines.Count - i);
@@ -131,17 +169,26 @@ public static partial class EmailBodyCleaner
         }
     }
 
-    private static bool HasSignatureContent(IReadOnlyList<string> lines, int start)
+    private static bool HasStrongSignatureEvidence(IReadOnlyList<string> lines, int start)
     {
         var remaining = lines.Skip(start)
             .Where(line => !string.IsNullOrWhiteSpace(line))
-            .Take(8)
+            .Take(12)
             .ToList();
         if (remaining.Count == 0) return false;
-        if (remaining.Count >= 2) return true;
+        return remaining.Any(line =>
+            EmailOrUrlRegex().IsMatch(line) || PhoneRegex().IsMatch(line));
+    }
 
-        var line = remaining[0];
-        return EmailOrUrlRegex().IsMatch(line) || PhoneRegex().IsMatch(line);
+    private static string StripQuotePrefix(string value) =>
+        QuotePrefixRegex().Replace(value, string.Empty);
+
+    private static void TrimEmptyLines(List<string> lines)
+    {
+        while (lines.Count > 0 && string.IsNullOrWhiteSpace(lines[0]))
+            lines.RemoveAt(0);
+        while (lines.Count > 0 && string.IsNullOrWhiteSpace(lines[^1]))
+            lines.RemoveAt(lines.Count - 1);
     }
 
     private static string NormalizeForMatch(string value) =>
@@ -169,8 +216,8 @@ public static partial class EmailBodyCleaner
     [GeneratedRegex(@"^\s*(subject|主旨)\s*[：:]", RegexOptions.IgnoreCase | RegexOptions.Multiline)]
     private static partial Regex SubjectHeaderRegex();
 
-    [GeneratedRegex(@"^\s*>+")]
-    private static partial Regex QuotedLineRegex();
+    [GeneratedRegex(@"^\s*>+\s?")]
+    private static partial Regex QuotePrefixRegex();
 
     [GeneratedRegex(@"^\s*--\s*$")]
     private static partial Regex SignatureDelimiterRegex();
