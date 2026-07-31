@@ -1,0 +1,474 @@
+<Window x:Class="DocumentTailor.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Document Tailor" Width="1280" Height="820" MinWidth="640" MinHeight="520"
+        WindowStartupLocation="CenterScreen" WindowStyle="None" ResizeMode="CanResize"
+        Background="#09101A" FontFamily="Segoe UI, Microsoft JhengHei UI"
+        Icon="Assets/DocumentTailor.png">
+    <Window.Resources>
+        <LinearGradientBrush x:Key="HeroGradient" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#173B5B" Offset="0"/>
+            <GradientStop Color="#171F46" Offset=".5"/>
+            <GradientStop Color="#281943" Offset="1"/>
+        </LinearGradientBrush>
+        <DataTemplate x:Key="FileTemplate">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="48"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Border Width="38" Height="38" CornerRadius="9" Background="#263B53" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Extension}" Foreground="#66E5FF" FontWeight="Bold"
+                               FontSize="10" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding Path}" Foreground="#70809D" FontSize="10"
+                               TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
+                </StackPanel>
+                <TextBlock Grid.Column="2" Text="{Binding SizeLabel}" Foreground="#8292AD"
+                           FontSize="11" VerticalAlignment="Center"/>
+            </Grid>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Border BorderBrush="#24334C" BorderThickness="1" Background="#09101A">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="48"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="34"/>
+            </Grid.RowDefinitions>
+
+            <!-- Custom title bar -->
+            <Grid Grid.Row="0" Background="#0B121E" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="250"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="138"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" Margin="18,0" VerticalAlignment="Center">
+                    <Border Width="24" Height="24" CornerRadius="7" ClipToBounds="True">
+                        <Image Source="Assets/DocumentTailor.png" Stretch="UniformToFill"/>
+                    </Border>
+                    <TextBlock Text="DOCUMENT TAILOR" Margin="10,0,0,0" FontSize="12"
+                               FontWeight="SemiBold" VerticalAlignment="Center"/>
+                </StackPanel>
+                <TextBlock Grid.Column="1" x:Name="WindowSectionTitle" Text="首頁"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Foreground="#8796B1" FontSize="12"/>
+                <StackPanel Grid.Column="1" x:Name="CompactNavigation" Orientation="Horizontal"
+                            HorizontalAlignment="Center" Visibility="Collapsed">
+                    <Button Content="首頁" Tag="home" Click="CompactNav_Click" ToolTip="首頁"
+                            Background="Transparent" Foreground="#8293AE" BorderThickness="0" Padding="10,4"/>
+                    <Button Content="轉 MD" Tag="convert" Click="CompactNav_Click" ToolTip="文件轉 Markdown"
+                            Background="Transparent" Foreground="#8293AE" BorderThickness="0" Padding="10,4"/>
+                    <Button Content="合併" Tag="merge" Click="CompactNav_Click" ToolTip="PDF 合併"
+                            Background="Transparent" Foreground="#8293AE" BorderThickness="0" Padding="10,4"/>
+                    <Button Content="整理" Tag="multipdf" Click="CompactNav_Click" ToolTip="多 PDF 整理"
+                            Background="Transparent" Foreground="#8293AE" BorderThickness="0" Padding="10,4"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="—" Width="46" Background="Transparent" Foreground="#9EABC1"
+                            BorderThickness="0" Click="Minimize_Click"/>
+                    <Button Content="□" Width="46" Background="Transparent" Foreground="#9EABC1"
+                            BorderThickness="0" Click="Maximize_Click"/>
+                    <Button Content="×" Width="46" Background="Transparent" Foreground="#9EABC1"
+                            BorderThickness="0" Click="Close_Click"/>
+                </StackPanel>
+            </Grid>
+
+            <Grid Grid.Row="1" x:Name="BodyLayout">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition x:Name="NavigationColumn" Width="250"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Navigation -->
+                <Border x:Name="SideNavigation" Background="#0D1522" BorderBrush="#1D2A3F" BorderThickness="0,1,1,0">
+                    <Grid Margin="16,22,16,18">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="WORKSPACE" Foreground="#596A87" FontSize="10"
+                                   FontWeight="Bold" Margin="14,0,0,10"/>
+                        <StackPanel Grid.Row="1">
+                            <Button x:Name="NavHome" Style="{StaticResource NavButton}" Tag="active"
+                                    Click="Nav_Click" Content="⌂   首頁總覽"/>
+                            <Button x:Name="NavConvert" Style="{StaticResource NavButton}"
+                                    Click="Nav_Click" Content="◇   文件轉 Markdown"/>
+                            <Button x:Name="NavMerge" Style="{StaticResource NavButton}"
+                                    Click="Nav_Click" Content="⊞   PDF 合併"/>
+                            <Button x:Name="NavMultiPdf" Style="{StaticResource NavButton}"
+                                    Click="Nav_Click" Content="≡   多 PDF 整理"/>
+                        </StackPanel>
+                        <Border Grid.Row="3" Background="#111D2C" CornerRadius="12" Padding="14">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse Width="7" Height="7" Fill="#42E49A" Margin="0,0,8,0"/>
+                                    <TextBlock Text="LOCAL MODE" Foreground="#8FA3BE" FontSize="10"
+                                               FontWeight="SemiBold"/>
+                                </StackPanel>
+                                <TextBlock Text="檔案只在這台電腦處理，不會上傳雲端。"
+                                           Foreground="#687A96" FontSize="11" TextWrapping="Wrap"
+                                           LineHeight="18" Margin="0,9,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <Grid x:Name="ContentHost" Grid.Column="1" Margin="34,26,34,20">
+                    <!-- Home -->
+                    <ScrollViewer x:Name="HomePage" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <Grid x:Name="HomeHeroLayout">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1.05*"/>
+                                    <ColumnDefinition x:Name="HomeVisualColumn" Width=".95*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center" Margin="8,20,40,20">
+                                    <Border Background="#173B4A" CornerRadius="20" HorizontalAlignment="Left"
+                                            Padding="12,6" Margin="0,0,0,20">
+                                        <TextBlock Text="●  LOCAL DOCUMENT WORKSPACE" Foreground="#5FE4FF"
+                                                   FontSize="10" FontWeight="SemiBold"/>
+                                    </Border>
+                                    <TextBlock Text="把零散文件，&#x0a;整理成清晰知識。"
+                                               FontSize="46" FontWeight="SemiBold" LineHeight="56"
+                                               TextWrapping="Wrap"/>
+                                    <TextBlock Text="Document Tailor 在本機解析 Word、PDF、Outlook MSG、CSV 與 Excel，&#x0a;輸出乾淨 Markdown，也能重新編排與合併 PDF。"
+                                               Foreground="#94A5C2" FontSize="15" LineHeight="26" Margin="0,22,0,28"
+                                               TextWrapping="Wrap"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Style="{StaticResource PrimaryButton}" Content="開始轉換  →"
+                                                Tag="convert" Click="HomeAction_Click" Margin="0,0,12,0"/>
+                                        <Button Style="{StaticResource GhostButton}" Content="合併 PDF"
+                                                Tag="merge" Click="HomeAction_Click"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <Border x:Name="HeroCard" Grid.Column="1" Height="390" CornerRadius="24" Background="{StaticResource HeroGradient}"
+                                        BorderBrush="#34506B" BorderThickness="1" ClipToBounds="True">
+                                    <Grid x:Name="HeroVisual" MouseMove="HeroVisual_MouseMove" MouseLeave="HeroVisual_MouseLeave">
+                                        <Canvas Opacity=".16">
+                                            <Line X1="0" Y1="65" X2="600" Y2="65" Stroke="#5ECFE8"/>
+                                            <Line X1="0" Y1="130" X2="600" Y2="130" Stroke="#5ECFE8"/>
+                                            <Line X1="0" Y1="195" X2="600" Y2="195" Stroke="#5ECFE8"/>
+                                            <Line X1="0" Y1="260" X2="600" Y2="260" Stroke="#5ECFE8"/>
+                                            <Line X1="0" Y1="325" X2="600" Y2="325" Stroke="#5ECFE8"/>
+                                            <Line X1="100" Y1="0" X2="100" Y2="390" Stroke="#5ECFE8"/>
+                                            <Line X1="200" Y1="0" X2="200" Y2="390" Stroke="#5ECFE8"/>
+                                            <Line X1="300" Y1="0" X2="300" Y2="390" Stroke="#5ECFE8"/>
+                                            <Line X1="400" Y1="0" X2="400" Y2="390" Stroke="#5ECFE8"/>
+                                            <Line X1="500" Y1="0" X2="500" Y2="390" Stroke="#5ECFE8"/>
+                                        </Canvas>
+                                        <Ellipse Width="270" Height="270" Stroke="#50DDFB" StrokeThickness="1"
+                                                 Opacity=".28" StrokeDashArray="3,8" HorizontalAlignment="Center"
+                                                 VerticalAlignment="Center"/>
+                                        <Ellipse Width="180" Height="180" Stroke="#B287FF" StrokeThickness="1"
+                                                 Opacity=".35" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <Border Width="116" Height="116" CornerRadius="28" Background="#10283B"
+                                                BorderBrush="#50E1FF" BorderThickness="1.5"
+                                                HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="DT" Foreground="#65E6FF" FontSize="30"
+                                                           FontWeight="Bold" HorizontalAlignment="Center"/>
+                                                <TextBlock Text="TRANSFORM" Foreground="#7D91AD" FontSize="8"
+                                                           HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+                                        <Border x:Name="OrbitDoc" Width="86" Height="52" CornerRadius="12"
+                                                Background="#182D42" BorderBrush="#3D92B1" BorderThickness="1">
+                                            <Border.RenderTransform><TranslateTransform/></Border.RenderTransform>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                <TextBlock Text="W" Foreground="#71B7FF" FontWeight="Bold" Margin="0,0,8,0"/>
+                                                <TextBlock Text="DOCX" Foreground="#C7D8F1" FontSize="10"/>
+                                            </StackPanel>
+                                        </Border>
+                                        <Border x:Name="OrbitPdf" Width="86" Height="52" CornerRadius="12"
+                                                Background="#35243D" BorderBrush="#A45C98" BorderThickness="1">
+                                            <Border.RenderTransform><TranslateTransform/></Border.RenderTransform>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                <TextBlock Text="P" Foreground="#FF85B2" FontWeight="Bold" Margin="0,0,8,0"/>
+                                                <TextBlock Text="PDF" Foreground="#E8CCE0" FontSize="10"/>
+                                            </StackPanel>
+                                        </Border>
+                                        <Border x:Name="OrbitSheet" Width="86" Height="52" CornerRadius="12"
+                                                Background="#15372F" BorderBrush="#3A9E7A" BorderThickness="1">
+                                            <Border.RenderTransform><TranslateTransform/></Border.RenderTransform>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                <TextBlock Text="X" Foreground="#62E6AD" FontWeight="Bold" Margin="0,0,8,0"/>
+                                                <TextBlock Text="SHEET" Foreground="#CAE8DC" FontSize="10"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                            </Grid>
+
+                            <TextBlock Text="三個工作流，一個乾淨工作區" FontSize="22" FontWeight="SemiBold"
+                                       Margin="8,30,0,16"/>
+                            <Grid Margin="0,0,0,20">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition/>
+                                </Grid.ColumnDefinitions>
+                                <Border Margin="0,0,10,0" Background="#111B2A" BorderBrush="#22334D"
+                                        BorderThickness="1" CornerRadius="16" Padding="20">
+                                    <StackPanel>
+                                        <TextBlock Text="01  FORMAT" Foreground="#57DEFA" FontSize="10" FontWeight="Bold"/>
+                                        <TextBlock Text="文件轉 Markdown" FontSize="17" FontWeight="SemiBold" Margin="0,13,0,8"/>
+                                        <TextBlock Text="DOCX、PDF、MSG、CSV、XLSX、TXT，保留標題、郵件欄位、清單與表格。"
+                                                   Foreground="#8394B0" FontSize="12" TextWrapping="Wrap" LineHeight="20"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Column="1" Margin="5,0" Background="#111B2A" BorderBrush="#22334D"
+                                        BorderThickness="1" CornerRadius="16" Padding="20">
+                                    <StackPanel>
+                                        <TextBlock Text="02  COMBINE" Foreground="#A98AFF" FontSize="10" FontWeight="Bold"/>
+                                        <TextBlock Text="PDF 自由合併" FontSize="17" FontWeight="SemiBold" Margin="0,13,0,8"/>
+                                        <TextBlock Text="拖放多份 PDF、調整順序，再輸出成單一文件。"
+                                                   Foreground="#8394B0" FontSize="12" TextWrapping="Wrap" LineHeight="20"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Column="2" Margin="10,0,0,0" Background="#111B2A" BorderBrush="#22334D"
+                                        BorderThickness="1" CornerRadius="16" Padding="20">
+                                    <StackPanel>
+                                        <TextBlock Text="03  ORGANIZE" Foreground="#52E2AE" FontSize="10" FontWeight="Bold"/>
+                                        <TextBlock Text="多 PDF 整理成 MD" FontSize="17" FontWeight="SemiBold" Margin="0,13,0,8"/>
+                                        <TextBlock Text="依指定順序擷取多份 PDF，建立章節並整合為一份 Markdown。"
+                                                   Foreground="#8394B0" FontSize="12" TextWrapping="Wrap" LineHeight="20"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- Convert page -->
+                    <Grid x:Name="ConvertPage" Visibility="Collapsed">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Grid Margin="4,0,4,20">
+                            <StackPanel>
+                                <TextBlock Text="文件轉 Markdown" FontSize="30" FontWeight="SemiBold"/>
+                                <TextBlock Text="支援 DOCX、PDF、MSG、CSV、XLSX、XLSM、TXT；可多選並整合輸出。"
+                                           Foreground="#8495B1" FontSize="13" Margin="0,8,0,0"/>
+                            </StackPanel>
+                            <Button HorizontalAlignment="Right" VerticalAlignment="Center"
+                                    Style="{StaticResource GhostButton}" Content="+ 加入文件"
+                                    Tag="convert" Click="AddFiles_Click"/>
+                        </Grid>
+                        <Grid x:Name="ConvertWorkspace" Grid.Row="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width=".95*"/>
+                                <ColumnDefinition Width="18"/>
+                                <ColumnDefinition x:Name="ConvertPreviewColumn" Width="1.05*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="118"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Border x:Name="ConvertDropZone" Tag="convert" AllowDrop="True"
+                                        DragEnter="DropZone_DragEnter" DragLeave="DropZone_DragLeave" Drop="DropZone_Drop"
+                                        Background="#101B2A" BorderBrush="#31516A" BorderThickness="1"
+                                        CornerRadius="15" Padding="20">
+                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <TextBlock Text="⇣" Foreground="#4DE0FF" FontSize="25" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="拖放文件到這裡" FontWeight="SemiBold" FontSize="14" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="或使用右上方「加入文件」" Foreground="#71839F" FontSize="11"
+                                                   HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                                <ListView Grid.Row="1" x:Name="ConvertList" ItemTemplate="{StaticResource FileTemplate}"
+                                          Margin="0,14,0,8" SelectionMode="Single"/>
+                                <Grid Grid.Row="2">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Style="{StaticResource GhostButton}" Content="移除" Tag="convert:remove"
+                                                Click="ListAction_Click" Margin="0,0,8,0"/>
+                                        <Button Style="{StaticResource GhostButton}" Content="清空" Tag="convert:clear"
+                                                Click="ListAction_Click"/>
+                                    </StackPanel>
+                                    <Button HorizontalAlignment="Right" Style="{StaticResource PrimaryButton}"
+                                            Content="轉換並儲存  →" Click="Convert_Click"/>
+                                </Grid>
+                            </Grid>
+                            <Grid x:Name="ConvertPreviewPanel" Grid.Column="2">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <Grid Margin="4,0,4,10">
+                                    <TextBlock Text="MARKDOWN PREVIEW" Foreground="#6D809F" FontSize="10"
+                                               FontWeight="Bold"/>
+                                    <TextBlock x:Name="ConvertPreviewMeta" Text="等待轉換"
+                                               HorizontalAlignment="Right" Foreground="#60718C" FontSize="10"/>
+                                </Grid>
+                                <TextBox Grid.Row="1" x:Name="ConvertPreview" IsReadOnly="True"
+                                         AcceptsReturn="True" TextWrapping="NoWrap"
+                                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
+                            </Grid>
+                        </Grid>
+                    </Grid>
+
+                    <!-- Merge page -->
+                    <Grid x:Name="MergePage" Visibility="Collapsed">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Grid Margin="4,0,4,20">
+                            <StackPanel>
+                                <TextBlock Text="PDF 合併" FontSize="30" FontWeight="SemiBold"/>
+                                <TextBlock Text="依清單順序合併 PDF；選取項目後可上下調整。"
+                                           Foreground="#8495B1" FontSize="13" Margin="0,8,0,0"/>
+                            </StackPanel>
+                            <Button HorizontalAlignment="Right" VerticalAlignment="Center"
+                                    Style="{StaticResource GhostButton}" Content="+ 加入 PDF"
+                                    Tag="merge" Click="AddFiles_Click"/>
+                        </Grid>
+                        <Grid Grid.Row="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="18"/>
+                                <ColumnDefinition Width="260"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Background="#0E1724" BorderBrush="#21324B" BorderThickness="1" CornerRadius="16" Padding="16">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="90"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <Border x:Name="MergeDropZone" Tag="merge" AllowDrop="True"
+                                            DragEnter="DropZone_DragEnter" DragLeave="DropZone_DragLeave" Drop="DropZone_Drop"
+                                            Background="#111F2E" BorderBrush="#334C68" BorderThickness="1" CornerRadius="12">
+                                        <TextBlock Text="⇣  將 PDF 拖放到此處" Foreground="#8DDFF1"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ListView Grid.Row="1" x:Name="MergeList" ItemTemplate="{StaticResource FileTemplate}"
+                                              Margin="0,14,0,0" SelectionMode="Single"/>
+                                </Grid>
+                            </Border>
+                            <Border Grid.Column="2" Background="#111B2A" BorderBrush="#22334D" BorderThickness="1"
+                                    CornerRadius="16" Padding="18">
+                                <StackPanel>
+                                    <TextBlock Text="排序與輸出" FontSize="17" FontWeight="SemiBold"/>
+                                    <TextBlock Text="輸出會從清單最上方開始。" Foreground="#71839F" FontSize="11"
+                                               Margin="0,6,0,18"/>
+                                    <Button Style="{StaticResource GhostButton}" Content="↑  上移" Tag="merge:up"
+                                            Click="ListAction_Click" Margin="0,0,0,8"/>
+                                    <Button Style="{StaticResource GhostButton}" Content="↓  下移" Tag="merge:down"
+                                            Click="ListAction_Click" Margin="0,0,0,8"/>
+                                    <Button Style="{StaticResource GhostButton}" Content="移除所選" Tag="merge:remove"
+                                            Click="ListAction_Click" Margin="0,0,0,8"/>
+                                    <Button Style="{StaticResource GhostButton}" Content="清空全部" Tag="merge:clear"
+                                            Click="ListAction_Click" Margin="0,0,0,22"/>
+                                    <Button Style="{StaticResource PrimaryButton}" Content="合併並輸出 PDF  →"
+                                            Click="Merge_Click"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Grid>
+
+                    <!-- Multi PDF page -->
+                    <Grid x:Name="MultiPdfPage" Visibility="Collapsed">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Grid Margin="4,0,4,20">
+                            <StackPanel>
+                                <TextBlock Text="多 PDF 整理成 Markdown" FontSize="30" FontWeight="SemiBold"/>
+                                <TextBlock Text="擷取多份 PDF 文字，依順序建立章節並整合成一份 Markdown。"
+                                           Foreground="#8495B1" FontSize="13" Margin="0,8,0,0"/>
+                            </StackPanel>
+                            <Button HorizontalAlignment="Right" VerticalAlignment="Center"
+                                    Style="{StaticResource GhostButton}" Content="+ 加入 PDF"
+                                    Tag="multipdf" Click="AddFiles_Click"/>
+                        </Grid>
+                        <Grid x:Name="MultiPdfWorkspace" Grid.Row="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width=".95*"/>
+                                <ColumnDefinition Width="18"/>
+                                <ColumnDefinition x:Name="MultiPdfPreviewColumn" Width="1.05*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="94"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Border x:Name="MultiPdfDropZone" Tag="multipdf" AllowDrop="True"
+                                        DragEnter="DropZone_DragEnter" DragLeave="DropZone_DragLeave" Drop="DropZone_Drop"
+                                        Background="#101B2A" BorderBrush="#31516A" BorderThickness="1" CornerRadius="15">
+                                    <TextBlock Text="⇣  拖放多份 PDF，清單順序就是章節順序"
+                                               Foreground="#8DDFF1" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ListView Grid.Row="1" x:Name="MultiPdfList" ItemTemplate="{StaticResource FileTemplate}"
+                                          Margin="0,14,0,8" SelectionMode="Single"/>
+                                <Grid Grid.Row="2">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Style="{StaticResource GhostButton}" Content="↑" Tag="multipdf:up"
+                                                Click="ListAction_Click" Margin="0,0,6,0"/>
+                                        <Button Style="{StaticResource GhostButton}" Content="↓" Tag="multipdf:down"
+                                                Click="ListAction_Click" Margin="0,0,12,0"/>
+                                        <Button Style="{StaticResource GhostButton}" Content="移除" Tag="multipdf:remove"
+                                                Click="ListAction_Click" Margin="0,0,6,0"/>
+                                        <Button Style="{StaticResource GhostButton}" Content="清空" Tag="multipdf:clear"
+                                                Click="ListAction_Click"/>
+                                    </StackPanel>
+                                    <Button HorizontalAlignment="Right" Style="{StaticResource PrimaryButton}"
+                                            Content="整理並儲存 MD  →" Click="MultiPdf_Click"/>
+                                </Grid>
+                            </Grid>
+                            <Grid x:Name="MultiPdfPreviewPanel" Grid.Column="2">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <Grid Margin="4,0,4,10">
+                                    <TextBlock Text="COLLECTION PREVIEW" Foreground="#6D809F" FontSize="10"
+                                               FontWeight="Bold"/>
+                                    <TextBlock x:Name="MultiPdfPreviewMeta" Text="等待整理"
+                                               HorizontalAlignment="Right" Foreground="#60718C" FontSize="10"/>
+                                </Grid>
+                                <TextBox Grid.Row="1" x:Name="MultiPdfPreview" IsReadOnly="True"
+                                         AcceptsReturn="True" TextWrapping="NoWrap"
+                                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
+                            </Grid>
+                        </Grid>
+                    </Grid>
+                </Grid>
+            </Grid>
+
+            <!-- Global status -->
+            <Grid Grid.Row="2" Background="#0B121D">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="250"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="v1.0" Foreground="#465772" Margin="20,0" VerticalAlignment="Center" FontSize="10"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Ellipse x:Name="StatusDot" Width="6" Height="6" Fill="#42E49A" Margin="14,0,8,0"/>
+                    <TextBlock x:Name="StatusText" Text="準備完成" Foreground="#7889A5" FontSize="10"/>
+                    <ProgressBar x:Name="BusyProgress" Width="110" Height="3" IsIndeterminate="True"
+                                 Visibility="Collapsed" Margin="16,0,0,0"/>
+                </StackPanel>
+                <TextBlock Grid.Column="2" Text="開發者 @Louis" Foreground="#60718C"
+                           FontSize="10" VerticalAlignment="Center" Margin="14,0,16,0"/>
+                <Button Grid.Column="3" x:Name="CancelOperationButton" Content="取消作業"
+                        Visibility="Collapsed" Click="CancelOperation_Click"
+                        Background="Transparent" Foreground="#FF8AA5" BorderThickness="0"
+                        Margin="0,0,16,0" FontSize="10" Cursor="Hand"/>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>
