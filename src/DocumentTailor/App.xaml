@@ -52,8 +52,8 @@
             </Setter>
         </Style>
         <Style TargetType="Button" x:Key="PrimaryButton">
-            <Setter Property="Foreground" Value="#071018"/>
-            <Setter Property="Background" Value="{StaticResource CyanBrush}"/>
+            <Setter Property="Foreground" Value="#03141A"/>
+            <Setter Property="Background" Value="#28D7FF"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="22,13"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -64,28 +64,76 @@
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Bg" Background="{TemplateBinding Background}" CornerRadius="10"
                                 Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock Text="{TemplateBinding Content}"
+                                       Foreground="{TemplateBinding Foreground}"
+                                       FontFamily="{TemplateBinding FontFamily}"
+                                       FontSize="{TemplateBinding FontSize}"
+                                       FontWeight="{TemplateBinding FontWeight}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bg" Property="Background" Value="#7BEAFF"/>
+                                <Setter Property="Foreground" Value="#03141A"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bg" Property="Opacity" Value=".78"/>
+                                <Setter TargetName="Bg" Property="Background" Value="#08B9D8"/>
+                                <Setter Property="Foreground" Value="#020E12"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Bg" Property="Opacity" Value=".4"/>
+                                <Setter TargetName="Bg" Property="Background" Value="#26394A"/>
+                                <Setter Property="Foreground" Value="#AEBCCD"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
-        <Style TargetType="Button" x:Key="GhostButton" BasedOn="{StaticResource PrimaryButton}">
-            <Setter Property="Foreground" Value="#D8E6FF"/>
+        <Style TargetType="Button" x:Key="GhostButton">
+            <Setter Property="Foreground" Value="#E8F0FF"/>
             <Setter Property="Background" Value="#202B40"/>
+            <Setter Property="BorderBrush" Value="#354866"/>
+            <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="16,10"/>
             <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bg" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="10" Padding="{TemplateBinding Padding}">
+                            <TextBlock Text="{TemplateBinding Content}"
+                                       Foreground="{TemplateBinding Foreground}"
+                                       FontFamily="{TemplateBinding FontFamily}"
+                                       FontSize="{TemplateBinding FontSize}"
+                                       FontWeight="{TemplateBinding FontWeight}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="#2B3B55"/>
+                                <Setter TargetName="Bg" Property="BorderBrush" Value="#4D6A91"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="#172338"/>
+                                <Setter TargetName="Bg" Property="BorderBrush" Value="#28D7FF"/>
+                                <Setter Property="Foreground" Value="#F4F8FF"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bg" Property="Background" Value="#151D2B"/>
+                                <Setter TargetName="Bg" Property="BorderBrush" Value="#29364C"/>
+                                <Setter Property="Foreground" Value="#8390A5"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
         <Style TargetType="TextBox">
             <Setter Property="FontFamily" Value="Cascadia Code, Consolas, Microsoft JhengHei UI"/>
