@@ -24,7 +24,7 @@
                 </Border>
                 <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center">
                     <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis"/>
-                    <TextBlock Text="{Binding Path}" Foreground="#70809D" FontSize="10"
+                    <TextBlock Text="{Binding Path}" Foreground="#7F91AE" FontSize="10"
                                TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
                 </StackPanel>
                 <TextBlock Grid.Column="2" Text="{Binding SizeLabel}" Foreground="#8292AD"
@@ -94,7 +94,7 @@
                             <RowDefinition Height="*"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-                        <TextBlock Text="WORKSPACE" Foreground="#596A87" FontSize="10"
+                        <TextBlock Text="WORKSPACE" Foreground="#7C8FAC" FontSize="10"
                                    FontWeight="Bold" Margin="14,0,0,10"/>
                         <StackPanel Grid.Row="1">
                             <Button x:Name="NavHome" Style="{StaticResource NavButton}" Tag="active"
@@ -114,7 +114,7 @@
                                                FontWeight="SemiBold"/>
                                 </StackPanel>
                                 <TextBlock Text="檔案只在這台電腦處理，不會上傳雲端。"
-                                           Foreground="#687A96" FontSize="11" TextWrapping="Wrap"
+                                           Foreground="#8294B0" FontSize="11" TextWrapping="Wrap"
                                            LineHeight="18" Margin="0,9,0,0"/>
                             </StackPanel>
                         </Border>
@@ -176,7 +176,7 @@
                                             <StackPanel VerticalAlignment="Center">
                                                 <TextBlock Text="DT" Foreground="#65E6FF" FontSize="30"
                                                            FontWeight="Bold" HorizontalAlignment="Center"/>
-                                                <TextBlock Text="TRANSFORM" Foreground="#7D91AD" FontSize="8"
+                                                <TextBlock Text="TRANSFORM" Foreground="#9AACC5" FontSize="8"
                                                            HorizontalAlignment="Center" Margin="0,5,0,0"/>
                                             </StackPanel>
                                         </Border>
@@ -282,7 +282,7 @@
                                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                                         <TextBlock Text="⇣" Foreground="#4DE0FF" FontSize="25" HorizontalAlignment="Center"/>
                                         <TextBlock Text="拖放文件到這裡" FontWeight="SemiBold" FontSize="14" HorizontalAlignment="Center"/>
-                                        <TextBlock Text="或使用右上方「加入文件」" Foreground="#71839F" FontSize="11"
+                                        <TextBlock Text="或使用右上方「加入文件」" Foreground="#8496B3" FontSize="11"
                                                    HorizontalAlignment="Center" Margin="0,5,0,0"/>
                                     </StackPanel>
                                 </Border>
@@ -305,10 +305,10 @@
                                     <RowDefinition Height="*"/>
                                 </Grid.RowDefinitions>
                                 <Grid Margin="4,0,4,10">
-                                    <TextBlock Text="MARKDOWN PREVIEW" Foreground="#6D809F" FontSize="10"
+                                    <TextBlock Text="MARKDOWN PREVIEW" Foreground="#8093B2" FontSize="10"
                                                FontWeight="Bold"/>
                                     <TextBlock x:Name="ConvertPreviewMeta" Text="等待轉換"
-                                               HorizontalAlignment="Right" Foreground="#60718C" FontSize="10"/>
+                                               HorizontalAlignment="Right" Foreground="#7487A5" FontSize="10"/>
                                 </Grid>
                                 <TextBox Grid.Row="1" x:Name="ConvertPreview" IsReadOnly="True"
                                          AcceptsReturn="True" TextWrapping="NoWrap"
@@ -359,7 +359,7 @@
                                     CornerRadius="16" Padding="18">
                                 <StackPanel>
                                     <TextBlock Text="排序與輸出" FontSize="17" FontWeight="SemiBold"/>
-                                    <TextBlock Text="輸出會從清單最上方開始。" Foreground="#71839F" FontSize="11"
+                                    <TextBlock Text="輸出會從清單最上方開始。" Foreground="#8496B3" FontSize="11"
                                                Margin="0,6,0,18"/>
                                     <Button Style="{StaticResource GhostButton}" Content="↑  上移" Tag="merge:up"
                                             Click="ListAction_Click" Margin="0,0,0,8"/>
@@ -433,10 +433,10 @@
                                     <RowDefinition Height="*"/>
                                 </Grid.RowDefinitions>
                                 <Grid Margin="4,0,4,10">
-                                    <TextBlock Text="COLLECTION PREVIEW" Foreground="#6D809F" FontSize="10"
+                                    <TextBlock Text="COLLECTION PREVIEW" Foreground="#8093B2" FontSize="10"
                                                FontWeight="Bold"/>
                                     <TextBlock x:Name="MultiPdfPreviewMeta" Text="等待整理"
-                                               HorizontalAlignment="Right" Foreground="#60718C" FontSize="10"/>
+                                               HorizontalAlignment="Right" Foreground="#7487A5" FontSize="10"/>
                                 </Grid>
                                 <TextBox Grid.Row="1" x:Name="MultiPdfPreview" IsReadOnly="True"
                                          AcceptsReturn="True" TextWrapping="NoWrap"
@@ -455,14 +455,14 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="v1.0" Foreground="#465772" Margin="20,0" VerticalAlignment="Center" FontSize="10"/>
+                <TextBlock Text="v1.0" Foreground="#71839F" Margin="20,0" VerticalAlignment="Center" FontSize="10"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <Ellipse x:Name="StatusDot" Width="6" Height="6" Fill="#42E49A" Margin="14,0,8,0"/>
                     <TextBlock x:Name="StatusText" Text="準備完成" Foreground="#7889A5" FontSize="10"/>
                     <ProgressBar x:Name="BusyProgress" Width="110" Height="3" IsIndeterminate="True"
                                  Visibility="Collapsed" Margin="16,0,0,0"/>
                 </StackPanel>
-                <TextBlock Grid.Column="2" Text="開發者 @Louis" Foreground="#60718C"
+                <TextBlock Grid.Column="2" Text="開發者 @Louis" Foreground="#7A8CA8"
                            FontSize="10" VerticalAlignment="Center" Margin="14,0,16,0"/>
                 <Button Grid.Column="3" x:Name="CancelOperationButton" Content="取消作業"
                         Visibility="Collapsed" Click="CancelOperation_Click"

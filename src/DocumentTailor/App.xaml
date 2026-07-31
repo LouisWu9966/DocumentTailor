@@ -167,7 +167,7 @@
                                 <Setter TargetName="Row" Property="BorderBrush" Value="#356981"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Row" Property="Background" Value="#183247"/>
+                                <Setter TargetName="Row" Property="Background" Value="#13283A"/>
                                 <Setter TargetName="Row" Property="BorderBrush" Value="#28D7FF"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
