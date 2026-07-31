@@ -55,6 +55,7 @@ public sealed class MsgMarkdownConverter
             body = HtmlToMarkdown(message.BodyHtml);
         if (string.IsNullOrWhiteSpace(body) && !string.IsNullOrWhiteSpace(message.BodyRtf))
             body = HtmlToMarkdown(Rtf.ToHtml(message.BodyRtf));
+        body = EmailBodyCleaner.Clean(body);
         output.AppendLine(string.IsNullOrWhiteSpace(body) ? "> 此郵件沒有可讀取的本文。" : body.Trim());
         output.AppendLine();
 

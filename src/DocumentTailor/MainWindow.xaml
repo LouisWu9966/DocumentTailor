@@ -64,6 +64,8 @@
                             Background="Transparent" Foreground="#8293AE" BorderThickness="0" Padding="10,4"/>
                     <Button Content="轉 MD" Tag="convert" Click="CompactNav_Click" ToolTip="文件轉 Markdown"
                             Background="Transparent" Foreground="#8293AE" BorderThickness="0" Padding="10,4"/>
+                    <Button Content="再輸出" Tag="export" Click="CompactNav_Click" ToolTip="Markdown 再輸出"
+                            Background="Transparent" Foreground="#8293AE" BorderThickness="0" Padding="10,4"/>
                     <Button Content="合併" Tag="merge" Click="CompactNav_Click" ToolTip="PDF 合併"
                             Background="Transparent" Foreground="#8293AE" BorderThickness="0" Padding="10,4"/>
                 </StackPanel>
@@ -99,6 +101,8 @@
                                     Click="Nav_Click" Content="⌂   首頁總覽"/>
                             <Button x:Name="NavConvert" Style="{StaticResource NavButton}"
                                     Click="Nav_Click" Content="◇   文件轉 Markdown"/>
+                            <Button x:Name="NavExport" Style="{StaticResource NavButton}"
+                                    Click="Nav_Click" Content="↗   Markdown 再輸出"/>
                             <Button x:Name="NavMerge" Style="{StaticResource NavButton}"
                                     Click="Nav_Click" Content="⊞   PDF 合併"/>
                         </StackPanel>
@@ -135,14 +139,14 @@
                                     <TextBlock Text="把零散文件，&#x0a;整理成清晰知識。"
                                                FontSize="46" FontWeight="SemiBold" LineHeight="56"
                                                TextWrapping="Wrap"/>
-                                    <TextBlock Text="Document Tailor 在本機解析 Word、PDF、Outlook MSG、CSV 與 Excel，&#x0a;輸出乾淨 Markdown，也能重新編排與合併 PDF。"
+                                    <TextBlock Text="Document Tailor 在本機解析 Word、掃描 PDF、圖片、Outlook MSG 與試算表，&#x0a;輸出乾淨 Markdown，並可再製成 HTML、DOCX 或 PDF。"
                                                Foreground="#94A5C2" FontSize="15" LineHeight="26" Margin="0,22,0,28"
                                                TextWrapping="Wrap"/>
                                     <StackPanel Orientation="Horizontal">
                                         <Button Style="{StaticResource PrimaryButton}" Content="開始轉換  →"
                                                 Tag="convert" Click="HomeAction_Click" Margin="0,0,12,0"/>
-                                        <Button Style="{StaticResource GhostButton}" Content="合併 PDF"
-                                                Tag="merge" Click="HomeAction_Click"/>
+                                        <Button Style="{StaticResource GhostButton}" Content="Markdown 再輸出"
+                                                Tag="export" Click="HomeAction_Click"/>
                                     </StackPanel>
                                 </StackPanel>
 
@@ -204,10 +208,11 @@
                                 </Border>
                             </Grid>
 
-                            <TextBlock Text="兩個核心工作流，一個乾淨工作區" FontSize="22" FontWeight="SemiBold"
+                            <TextBlock Text="三個核心工作流，一個乾淨工作區" FontSize="22" FontWeight="SemiBold"
                                        Margin="8,30,0,16"/>
                             <Grid Margin="0,0,0,20">
                                 <Grid.ColumnDefinitions>
+                                    <ColumnDefinition/>
                                     <ColumnDefinition/>
                                     <ColumnDefinition/>
                                 </Grid.ColumnDefinitions>
@@ -216,17 +221,26 @@
                                     <StackPanel>
                                         <TextBlock Text="01  FORMAT" Foreground="#57DEFA" FontSize="10" FontWeight="Bold"/>
                                         <TextBlock Text="文件整理成 Markdown" FontSize="17" FontWeight="SemiBold" Margin="0,13,0,8"/>
-                                        <TextBlock Text="混合匯入 DOCX、PDF、MSG、CSV、XLSX、TXT，排序後彙整為一份 Markdown。"
-                                                   Foreground="#8394B0" FontSize="12" TextWrapping="Wrap" LineHeight="20"/>
+                                        <TextBlock Text="混合匯入文件與圖片，掃描頁 OCR、郵件長尾清理，拖曳排序後彙整輸出。"
+                                                   Foreground="#A4B4CC" FontSize="12" TextWrapping="Wrap" LineHeight="20"/>
                                     </StackPanel>
                                 </Border>
                                 <Border Grid.Column="1" Margin="6,0,0,0" Background="#111B2A" BorderBrush="#22334D"
                                         BorderThickness="1" CornerRadius="16" Padding="20">
                                     <StackPanel>
-                                        <TextBlock Text="02  COMBINE" Foreground="#A98AFF" FontSize="10" FontWeight="Bold"/>
+                                        <TextBlock Text="02  PUBLISH" Foreground="#A98AFF" FontSize="10" FontWeight="Bold"/>
+                                        <TextBlock Text="Markdown 再輸出" FontSize="17" FontWeight="SemiBold" Margin="0,13,0,8"/>
+                                        <TextBlock Text="開啟或編輯 Markdown，再輸出為離線 HTML、商務 DOCX 或 PDF。"
+                                                   Foreground="#A4B4CC" FontSize="12" TextWrapping="Wrap" LineHeight="20"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Column="2" Margin="12,0,0,0" Background="#111B2A" BorderBrush="#22334D"
+                                        BorderThickness="1" CornerRadius="16" Padding="20">
+                                    <StackPanel>
+                                        <TextBlock Text="03  COMBINE" Foreground="#65E6AD" FontSize="10" FontWeight="Bold"/>
                                         <TextBlock Text="PDF 自由合併" FontSize="17" FontWeight="SemiBold" Margin="0,13,0,8"/>
                                         <TextBlock Text="拖放多份 PDF、調整順序，再輸出成單一文件。"
-                                                   Foreground="#8394B0" FontSize="12" TextWrapping="Wrap" LineHeight="20"/>
+                                                   Foreground="#A4B4CC" FontSize="12" TextWrapping="Wrap" LineHeight="20"/>
                                     </StackPanel>
                                 </Border>
                             </Grid>
@@ -242,7 +256,7 @@
                         <Grid Margin="4,0,4,20">
                             <StackPanel>
                                 <TextBlock Text="文件轉 Markdown" FontSize="30" FontWeight="SemiBold"/>
-                                <TextBlock Text="支援 DOCX、PDF、MSG、CSV、XLSX、XLSM、TXT；可多選、排序並整合輸出。"
+                                <TextBlock Text="支援文件、MSG、試算表與圖片；掃描頁自動 OCR，可拖曳排序並整合輸出。"
                                            Foreground="#8495B1" FontSize="13" Margin="0,8,0,0"/>
                             </StackPanel>
                             <Button HorizontalAlignment="Right" VerticalAlignment="Center"
@@ -273,7 +287,10 @@
                                     </StackPanel>
                                 </Border>
                                 <ListView Grid.Row="1" x:Name="ConvertList" ItemTemplate="{StaticResource FileTemplate}"
-                                          Margin="0,14,0,8" SelectionMode="Single"/>
+                                          Margin="0,14,0,8" SelectionMode="Single" AllowDrop="True"
+                                          PreviewMouseLeftButtonDown="ConvertList_PreviewMouseLeftButtonDown"
+                                          PreviewMouseMove="ConvertList_PreviewMouseMove"
+                                          DragOver="ConvertList_DragOver" Drop="ConvertList_Drop"/>
                                 <Grid Grid.Row="2">
                                     <StackPanel Orientation="Horizontal">
                                         <Button Style="{StaticResource GhostButton}" Content="↑" Tag="convert:up"
@@ -307,6 +324,68 @@
                         </Grid>
                     </Grid>
 
+                    <!-- Markdown export page -->
+                    <Grid x:Name="ExportPage" Visibility="Collapsed">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Grid Margin="4,0,4,20">
+                            <StackPanel>
+                                <TextBlock Text="Markdown 再輸出" FontSize="30" FontWeight="SemiBold"/>
+                                <TextBlock Text="開啟或直接編輯 Markdown，再輸出為適合分享的 HTML、DOCX 或 PDF。"
+                                           Foreground="#A4B4CC" FontSize="13" Margin="0,8,0,0"/>
+                            </StackPanel>
+                            <Button HorizontalAlignment="Right" VerticalAlignment="Center"
+                                    Style="{StaticResource GhostButton}" Content="+ 開啟 Markdown"
+                                    Click="OpenMarkdown_Click"/>
+                        </Grid>
+                        <Grid Grid.Row="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="18"/>
+                                <ColumnDefinition Width="270"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <Grid Margin="4,0,4,10">
+                                    <TextBlock Text="MARKDOWN EDITOR" Foreground="#A9BAD3" FontSize="10"
+                                               FontWeight="Bold"/>
+                                    <TextBlock x:Name="ExportPreviewMeta" Text="可貼上內容或開啟 .md 檔"
+                                               HorizontalAlignment="Right" Foreground="#9BAEC8" FontSize="10"/>
+                                </Grid>
+                                <TextBox Grid.Row="1" x:Name="ExportPreview" AcceptsReturn="True"
+                                         AcceptsTab="True" TextWrapping="NoWrap"
+                                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                                         TextChanged="ExportPreview_TextChanged"/>
+                            </Grid>
+                            <Border Grid.Column="2" Background="#111B2A" BorderBrush="#2B3E5C" BorderThickness="1"
+                                    CornerRadius="16" Padding="18">
+                                <StackPanel>
+                                    <TextBlock Text="選擇輸出格式" FontSize="17" FontWeight="SemiBold"/>
+                                    <TextBlock Text="所有轉換都在本機完成。DOCX 與 PDF 已針對中英文排版。"
+                                               Foreground="#A4B4CC" FontSize="11" TextWrapping="Wrap"
+                                               LineHeight="18" Margin="0,7,0,20"/>
+                                    <Button Style="{StaticResource PrimaryButton}" Content="輸出 HTML  →"
+                                            Tag="html" Click="ExportMarkdown_Click" Margin="0,0,0,10"/>
+                                    <Button Style="{StaticResource GhostButton}" Content="輸出 DOCX"
+                                            Tag="docx" Click="ExportMarkdown_Click" Margin="0,0,0,10"/>
+                                    <Button Style="{StaticResource GhostButton}" Content="輸出 PDF"
+                                            Tag="pdf" Click="ExportMarkdown_Click"/>
+                                    <Border Background="#17253A" BorderBrush="#334A68" BorderThickness="1"
+                                            CornerRadius="10" Padding="12" Margin="0,22,0,0">
+                                        <TextBlock Text="HTML 適合快速分享；DOCX 適合接續編輯；PDF 適合定稿與列印。"
+                                                   Foreground="#B9C8DB" FontSize="11" TextWrapping="Wrap"
+                                                   LineHeight="18"/>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Grid>
+
                     <!-- Merge page -->
                     <Grid x:Name="MergePage" Visibility="Collapsed">
                         <Grid.RowDefinitions>
@@ -316,7 +395,7 @@
                         <Grid Margin="4,0,4,20">
                             <StackPanel>
                                 <TextBlock Text="PDF 合併" FontSize="30" FontWeight="SemiBold"/>
-                                <TextBlock Text="依清單順序合併 PDF；選取項目後可上下調整。"
+                                <TextBlock Text="依清單順序合併 PDF；可直接拖曳項目，或選取後上下調整。"
                                            Foreground="#8495B1" FontSize="13" Margin="0,8,0,0"/>
                             </StackPanel>
                             <Button HorizontalAlignment="Right" VerticalAlignment="Center"
@@ -342,14 +421,17 @@
                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
                                     <ListView Grid.Row="1" x:Name="MergeList" ItemTemplate="{StaticResource FileTemplate}"
-                                              Margin="0,14,0,0" SelectionMode="Single"/>
+                                              Margin="0,14,0,0" SelectionMode="Single" AllowDrop="True"
+                                              PreviewMouseLeftButtonDown="ConvertList_PreviewMouseLeftButtonDown"
+                                              PreviewMouseMove="ConvertList_PreviewMouseMove"
+                                              DragOver="ConvertList_DragOver" Drop="ConvertList_Drop"/>
                                 </Grid>
                             </Border>
                             <Border Grid.Column="2" Background="#111B2A" BorderBrush="#22334D" BorderThickness="1"
                                     CornerRadius="16" Padding="18">
                                 <StackPanel>
                                     <TextBlock Text="排序與輸出" FontSize="17" FontWeight="SemiBold"/>
-                                    <TextBlock Text="輸出會從清單最上方開始。" Foreground="#8496B3" FontSize="11"
+                                    <TextBlock Text="可拖曳排序；輸出會從清單最上方開始。" Foreground="#A4B4CC" FontSize="11"
                                                Margin="0,6,0,18"/>
                                     <Button Style="{StaticResource GhostButton}" Content="↑  上移" Tag="merge:up"
                                             Click="ListAction_Click" Margin="0,0,0,8"/>
@@ -377,7 +459,7 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="v1.0" Foreground="#71839F" Margin="20,0" VerticalAlignment="Center" FontSize="10"/>
+                <TextBlock Text="v1.1.0" Foreground="#8FA0BB" Margin="20,0" VerticalAlignment="Center" FontSize="10"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <Ellipse x:Name="StatusDot" Width="6" Height="6" Fill="#42E49A" Margin="14,0,8,0"/>
                     <TextBlock x:Name="StatusText" Text="準備完成" Foreground="#7889A5" FontSize="10"/>

@@ -2,9 +2,16 @@ using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using DocumentTailor.Services;
 using MiniExcelLibs;
+using PdfSharpCore.Drawing;
 using PdfSharpCore.Pdf;
 using PdfSharpCore.Pdf.IO;
+using System.Globalization;
+using System.IO;
 using System.Text;
+using System.Threading;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 var artifactRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "artifacts", "smoke"));
 Directory.CreateDirectory(artifactRoot);
@@ -55,6 +62,39 @@ AssertContains(msgMarkdown, "收件者", "MSG 收件者");
 AssertContains(msgMarkdown, "第一封郵件本文", "MSG 本文");
 AssertContains(msgMarkdown, "報價單.txt", "MSG 附件");
 
+var vendorTail = """
+    您好，
+
+    請依附件新版規格報價，交期請維持九月底。
+
+    Best regards,
+    Vendor Sales Team
+    Tel: +886 2 2345 6789
+    sales@vendor.example
+
+    From: Louis Wu <louis@example.com>
+    Sent: Thursday, July 30, 2026 4:10 PM
+    To: Vendor Sales Team <sales@vendor.example>
+    Subject: RE: 報價需求
+
+    這是先前已經讀過、不應重複收錄的內容。
+
+    CONFIDENTIALITY NOTICE: This email and any attachments are intended only
+    for the named recipient and may contain confidential information.
+    """;
+var cleanedVendorTail = EmailBodyCleaner.Clean(vendorTail);
+AssertContains(cleanedVendorTail, "請依附件新版規格報價", "MSG 長尾清理保留本文");
+AssertNotContains(cleanedVendorTail, "Vendor Sales Team", "MSG 長尾清理移除簽名");
+AssertNotContains(cleanedVendorTail, "先前已經讀過", "MSG 長尾清理移除引用");
+AssertNotContains(cleanedVendorTail, "CONFIDENTIALITY", "MSG 長尾清理移除免責聲明");
+
+var cleanedMsg = Path.Combine(artifactRoot, "mail-cleaned.msg");
+CreateMsgSample(cleanedMsg, "供應商報價", vendorTail, null);
+var cleanedMsgMarkdown = await new MsgMarkdownConverter().ConvertAsync(cleanedMsg);
+AssertContains(cleanedMsgMarkdown, "請依附件新版規格報價", "MSG 實檔清理保留本文");
+AssertNotContains(cleanedMsgMarkdown, "Vendor Sales Team", "MSG 實檔清理移除簽名");
+AssertNotContains(cleanedMsgMarkdown, "先前已經讀過", "MSG 實檔清理移除引用");
+
 var combinedMsg = await new MarkdownService().ConvertManyAsync(
     [msgOne, msgTwo], "Outlook 郵件彙整");
 AssertContains(combinedMsg, "# Outlook 郵件彙整", "多 MSG 彙整標題");
@@ -74,20 +114,75 @@ using (var merged = PdfReader.Open(mergedPdf, PdfDocumentOpenMode.ReadOnly))
 }
 
 var pdfMarkdown = await new PdfMarkdownConverter().ConvertAsync(pdfOne);
-AssertContains(pdfMarkdown, "沒有可擷取的文字", "掃描／空白 PDF 提示");
+AssertContains(pdfMarkdown, "OCR", "掃描／空白 PDF 提示");
+
+var ocrImage = Path.Combine(artifactRoot, "ocr-image.png");
+CreateOcrImage(ocrImage);
+var imageMarkdown = await new ImageOcrMarkdownConverter().ConvertAsync(ocrImage);
+AssertContains(imageMarkdown, "4827", "圖片 OCR");
+
+var scannedPdf = Path.Combine(artifactRoot, "scanned.pdf");
+CreateImagePdf(scannedPdf, ocrImage);
+var scannedPdfMarkdown = await new PdfMarkdownConverter().ConvertAsync(scannedPdf);
+AssertContains(scannedPdfMarkdown, "4827", "掃描 PDF OCR");
 
 var combined = await new MarkdownService().ConvertManyAsync(
     [csvPath, wordPath], "整合測試");
 AssertContains(combined, "# 整合測試", "多文件標題");
 AssertContains(combined, "## sample", "多文件章節");
 
-Console.WriteLine("PASS: MSG / CSV / Excel / Word / PDF 轉換、多文件彙整與 PDF 合併煙霧測試全部通過。");
+var exportMarkdown = """
+    # 供應商文件整理報告
+
+    這是一份含 **粗體**、*斜體* 與 `inline code` 的中文測試文件。
+
+    ## 本期重點
+
+    - 掃描 PDF 與圖片可使用離線 OCR
+    - MSG 會排除簽名、重複引用與免責聲明
+
+    > 文件內容僅在本機處理，不會上傳雲端。
+
+    | 格式 | 用途 | 狀態 |
+    | --- | --- | --- |
+    | HTML | 快速分享 | 完成 |
+    | DOCX | 接續編輯 | 完成 |
+    | PDF | 定稿列印 | 完成 |
+
+    ```text
+    Document Tailor
+    developer = @Louis
+    mode = 本機離線
+    ```
+    """;
+var exportedHtml = Path.Combine(artifactRoot, "markdown-export.html");
+var exportedDocx = Path.Combine(artifactRoot, "markdown-export.docx");
+var exportedPdf = Path.Combine(artifactRoot, "markdown-export.pdf");
+var exportService = new MarkdownExportService();
+await exportService.ExportAsync(exportMarkdown, exportedHtml);
+await exportService.ExportAsync(exportMarkdown, exportedDocx);
+await exportService.ExportAsync(exportMarkdown, exportedPdf);
+AssertContains(await File.ReadAllTextAsync(exportedHtml), "供應商文件整理報告", "Markdown 匯出 HTML");
+using (var exportedWord = WordprocessingDocument.Open(exportedDocx, false))
+    AssertContains(exportedWord.MainDocumentPart?.Document?.InnerText ?? string.Empty,
+        "供應商文件整理報告", "Markdown 匯出 DOCX");
+using (var exportedPortableDocument = PdfReader.Open(exportedPdf, PdfDocumentOpenMode.ReadOnly))
+    if (exportedPortableDocument.PageCount < 1)
+        throw new InvalidOperationException("Markdown 匯出 PDF 失敗：沒有頁面。");
+
+Console.WriteLine("PASS: OCR / MSG 清理 / CSV / Excel / Word / PDF 轉換、Markdown 再輸出、多文件彙整與 PDF 合併測試全部通過。");
 Console.WriteLine($"Artifacts: {artifactRoot}");
 
 static void AssertContains(string actual, string expected, string label)
 {
     if (!actual.Contains(expected, StringComparison.Ordinal))
         throw new InvalidOperationException($"{label}失敗：找不到「{expected}」。\n\n{actual}");
+}
+
+static void AssertNotContains(string actual, string unexpected, string label)
+{
+    if (actual.Contains(unexpected, StringComparison.OrdinalIgnoreCase))
+        throw new InvalidOperationException($"{label}失敗：仍包含「{unexpected}」。\n\n{actual}");
 }
 
 static void CreateWordSample(string path)
@@ -120,6 +215,60 @@ static void CreateBlankPdf(string path, int pages)
     using var document = new PdfDocument();
     for (var i = 0; i < pages; i++) document.AddPage();
     document.Save(path);
+}
+
+static void CreateImagePdf(string path, string imagePath)
+{
+    using var document = new PdfDocument();
+    var page = document.AddPage();
+    page.Width = XUnit.FromPoint(612);
+    page.Height = XUnit.FromPoint(792);
+    using var graphics = XGraphics.FromPdfPage(page);
+    using var image = XImage.FromFile(imagePath);
+    graphics.DrawImage(image, 56, 120, 500, 167);
+    document.Save(path);
+}
+
+static void CreateOcrImage(string path)
+{
+    Exception? failure = null;
+    var thread = new Thread(() =>
+    {
+        try
+        {
+            const int width = 1200;
+            const int height = 400;
+            var visual = new DrawingVisual();
+            using (var drawing = visual.RenderOpen())
+            {
+                drawing.DrawRectangle(Brushes.White, null, new Rect(0, 0, width, height));
+                var text = new FormattedText(
+                    "INVOICE 4827",
+                    CultureInfo.GetCultureInfo("en-US"),
+                    FlowDirection.LeftToRight,
+                    new Typeface("Arial"),
+                    112,
+                    Brushes.Black,
+                    1);
+                drawing.DrawText(text, new Point(90, 110));
+            }
+
+            var bitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+            bitmap.Render(visual);
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bitmap));
+            using var stream = File.Create(path);
+            encoder.Save(stream);
+        }
+        catch (Exception ex)
+        {
+            failure = ex;
+        }
+    });
+    thread.SetApartmentState(ApartmentState.STA);
+    thread.Start();
+    thread.Join();
+    if (failure is not null) throw failure;
 }
 
 static void CreateMsgSample(string path, string subject, string body, string? attachmentPath)

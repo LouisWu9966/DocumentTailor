@@ -8,11 +8,77 @@ namespace DocumentTailor.Services;
 
 public sealed class PdfMarkdownConverter
 {
-    public Task<string> ConvertAsync(string path, IProgress<string>? progress = null,
-        CancellationToken cancellationToken = default)
-        => Task.Run(() => Convert(path, progress, cancellationToken), cancellationToken);
+    private readonly WindowsOcrService _ocr = new();
 
-    private static string Convert(string path, IProgress<string>? progress, CancellationToken cancellationToken)
+    public async Task<string> ConvertAsync(string path, IProgress<string>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var extraction = await Task.Run(
+            () => Extract(path, progress, cancellationToken), cancellationToken);
+        IReadOnlyDictionary<int, string> ocrPages = new Dictionary<int, string>();
+        string? ocrUnavailableReason = null;
+
+        if (extraction.ScannedPages.Count > 0)
+        {
+            try
+            {
+                ocrPages = await _ocr.RecognizePdfPagesAsync(
+                    path, extraction.ScannedPages, progress, cancellationToken);
+            }
+            catch (InvalidOperationException ex)
+            {
+                ocrUnavailableReason = ex.Message;
+                progress?.Report("找不到可用的 Windows OCR 語言，保留掃描頁提示。");
+            }
+        }
+
+        var output = new StringBuilder();
+        output.AppendLine("---");
+        output.AppendLine($"title: \"{Path.GetFileNameWithoutExtension(path).Replace("\"", "\\\"")}\"");
+        output.AppendLine($"source: \"{Path.GetFileName(path).Replace("\"", "\\\"")}\"");
+        output.AppendLine($"pages: {extraction.PageCount}");
+        output.AppendLine($"ocr_pages: {extraction.ScannedPages.Count}");
+        output.AppendLine("---");
+        output.AppendLine();
+        output.AppendLine($"# {MarkdownUtilities.Escape(Path.GetFileNameWithoutExtension(path))}");
+        output.AppendLine();
+
+        for (var pageNumber = 1; pageNumber <= extraction.PageCount; pageNumber++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (pageNumber > 1)
+            {
+                output.AppendLine();
+                output.AppendLine("---");
+                output.AppendLine();
+            }
+            output.AppendLine($"<!-- page {pageNumber} -->");
+            output.AppendLine();
+
+            var extracted = extraction.PageMarkdown[pageNumber - 1];
+            if (extracted is not null)
+            {
+                output.Append(extracted);
+            }
+            else if (ocrPages.TryGetValue(pageNumber, out var ocrText))
+            {
+                output.AppendLine("> 本頁文字由離線 OCR 辨識。");
+                output.AppendLine();
+                ImageOcrMarkdownConverter.AppendOcrText(output, ocrText);
+            }
+            else
+            {
+                output.AppendLine(ocrUnavailableReason is null
+                    ? "> OCR 未辨識到此掃描頁的可讀文字。"
+                    : $"> 此頁沒有文字層，且無法啟用 OCR：{MarkdownUtilities.Escape(ocrUnavailableReason)}");
+                output.AppendLine();
+            }
+        }
+        return output.ToString();
+    }
+
+    private static PdfExtraction Extract(
+        string path, IProgress<string>? progress, CancellationToken cancellationToken)
     {
         using var document = PdfDocument.Open(path);
         var allSizes = document.GetPages().SelectMany(page =>
@@ -25,43 +91,30 @@ public sealed class PdfMarkdownConverter
             ? 10
             : allSizes.GroupBy(x => x).OrderByDescending(x => x.Count()).First().Key;
 
-        var output = new StringBuilder();
-        output.AppendLine("---");
-        output.AppendLine($"title: \"{Path.GetFileNameWithoutExtension(path).Replace("\"", "\\\"")}\"");
-        output.AppendLine($"source: \"{Path.GetFileName(path).Replace("\"", "\\\"")}\"");
-        output.AppendLine($"pages: {document.NumberOfPages}");
-        output.AppendLine("---");
-        output.AppendLine();
-        output.AppendLine($"# {MarkdownUtilities.Escape(Path.GetFileNameWithoutExtension(path))}");
-        output.AppendLine();
+        var pages = new List<string?>(document.NumberOfPages);
+        var scannedPages = new List<int>();
 
         foreach (var page in document.GetPages())
         {
             cancellationToken.ThrowIfCancellationRequested();
             progress?.Report($"正在解析第 {page.Number} / {document.NumberOfPages} 頁");
-            if (page.Number > 1)
+            var words = page.GetWords(NearestNeighbourWordExtractor.Instance).ToList();
+            if (words.Count == 0)
             {
-                output.AppendLine();
-                output.AppendLine("---");
-                output.AppendLine();
+                pages.Add(null);
+                scannedPages.Add(page.Number);
+                continue;
             }
-            output.AppendLine($"<!-- page {page.Number} -->");
-            output.AppendLine();
-            AppendPage(output, page, bodySize);
+
+            var pageOutput = new StringBuilder();
+            AppendPage(pageOutput, words, bodySize);
+            pages.Add(pageOutput.ToString());
         }
-        return output.ToString();
+        return new PdfExtraction(document.NumberOfPages, pages, scannedPages);
     }
 
-    private static void AppendPage(StringBuilder output, Page page, double bodySize)
+    private static void AppendPage(StringBuilder output, IReadOnlyList<Word> words, double bodySize)
     {
-        var words = page.GetWords(NearestNeighbourWordExtractor.Instance).ToList();
-        if (words.Count == 0)
-        {
-            output.AppendLine("> 此頁沒有可擷取的文字，可能是掃描影像。");
-            output.AppendLine();
-            return;
-        }
-
         var tolerance = Math.Max(2.5, bodySize * .45);
         var lines = new List<List<Word>>();
         foreach (var word in words.OrderByDescending(x => x.BoundingBox.Top).ThenBy(x => x.BoundingBox.Left))
@@ -92,4 +145,7 @@ public sealed class PdfMarkdownConverter
             output.AppendLine();
         }
     }
+
+    private sealed record PdfExtraction(
+        int PageCount, IReadOnlyList<string?> PageMarkdown, IReadOnlyList<int> ScannedPages);
 }

@@ -9,9 +9,11 @@ public sealed class MarkdownService
     private readonly CsvMarkdownConverter _csv = new();
     private readonly ExcelMarkdownConverter _excel = new();
     private readonly MsgMarkdownConverter _msg = new();
+    private readonly ImageOcrMarkdownConverter _imageOcr = new();
 
     public static readonly string[] SupportedExtensions =
-        [".docx", ".pdf", ".csv", ".xlsx", ".xlsm", ".msg", ".txt", ".md"];
+        [".docx", ".pdf", ".csv", ".xlsx", ".xlsm", ".msg", ".txt", ".md",
+            ".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"];
 
     public async Task<string> ConvertAsync(string path, IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
@@ -23,6 +25,8 @@ public sealed class MarkdownService
             ".csv" => await _csv.ConvertAsync(path, cancellationToken),
             ".xlsx" or ".xlsm" => await _excel.ConvertAsync(path, cancellationToken),
             ".msg" => await _msg.ConvertAsync(path, cancellationToken),
+            ".png" or ".jpg" or ".jpeg" or ".bmp" or ".tif" or ".tiff" =>
+                await _imageOcr.ConvertAsync(path, progress, cancellationToken),
             ".txt" or ".md" => await ConvertTextAsync(path, cancellationToken),
             var ext => throw new NotSupportedException($"目前不支援 {ext} 格式。")
         };

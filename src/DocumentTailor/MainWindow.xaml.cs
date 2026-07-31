@@ -17,9 +17,14 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<DocumentItem> _convertFiles = [];
     private readonly ObservableCollection<DocumentItem> _mergeFiles = [];
     private readonly MarkdownService _markdownService = new();
+    private readonly MarkdownExportService _markdownExportService = new();
     private readonly PdfMergeService _pdfMergeService = new();
     private readonly DispatcherTimer _heroTimer;
     private CancellationTokenSource? _operationCancellation;
+    private DocumentItem? _draggedListItem;
+    private ListView? _dragSourceList;
+    private Point _dragStartPoint;
+    private string? _markdownSourcePath;
     private double _animationPhase;
     private bool _isBusy;
 
@@ -68,6 +73,7 @@ public partial class MainWindow : Window
     {
         if (sender == NavHome) ShowPage("home");
         else if (sender == NavConvert) ShowPage("convert");
+        else if (sender == NavExport) ShowPage("export");
         else if (sender == NavMerge) ShowPage("merge");
     }
 
@@ -80,13 +86,16 @@ public partial class MainWindow : Window
     {
         HomePage.Visibility = page == "home" ? Visibility.Visible : Visibility.Collapsed;
         ConvertPage.Visibility = page == "convert" ? Visibility.Visible : Visibility.Collapsed;
+        ExportPage.Visibility = page == "export" ? Visibility.Visible : Visibility.Collapsed;
         MergePage.Visibility = page == "merge" ? Visibility.Visible : Visibility.Collapsed;
         NavHome.Tag = page == "home" ? "active" : null;
         NavConvert.Tag = page == "convert" ? "active" : null;
+        NavExport.Tag = page == "export" ? "active" : null;
         NavMerge.Tag = page == "merge" ? "active" : null;
         WindowSectionTitle.Text = page switch
         {
             "convert" => "文件轉 Markdown",
+            "export" => "Markdown 再輸出",
             "merge" => "PDF 合併",
             _ => "首頁"
         };
@@ -102,7 +111,7 @@ public partial class MainWindow : Window
             Title = onlyPdf ? "選擇 PDF" : "選擇要轉換的文件",
             Filter = onlyPdf
                 ? "PDF 文件 (*.pdf)|*.pdf"
-                : "支援的文件|*.docx;*.pdf;*.msg;*.csv;*.xlsx;*.xlsm;*.txt;*.md|Outlook 郵件 (*.msg)|*.msg|Word (*.docx)|*.docx|PDF (*.pdf)|*.pdf|試算表 (*.csv;*.xlsx;*.xlsm)|*.csv;*.xlsx;*.xlsm|文字 (*.txt;*.md)|*.txt;*.md"
+                : "支援的文件|*.docx;*.pdf;*.msg;*.csv;*.xlsx;*.xlsm;*.txt;*.md;*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff|圖片 OCR (*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff)|*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff|Outlook 郵件 (*.msg)|*.msg|Word (*.docx)|*.docx|PDF (*.pdf)|*.pdf|試算表 (*.csv;*.xlsx;*.xlsm)|*.csv;*.xlsx;*.xlsm|文字 (*.txt;*.md)|*.txt;*.md"
         };
         if (dialog.ShowDialog() == true) AddFiles(mode, dialog.FileNames);
     }
@@ -186,6 +195,86 @@ public partial class MainWindow : Window
         SetStatus($"清單目前有 {collection.Count} 份文件");
     }
 
+    private void ConvertList_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not ListView list) return;
+        _dragStartPoint = e.GetPosition(list);
+        _dragSourceList = list;
+        _draggedListItem = FindVisualParent<ListViewItem>(e.OriginalSource as DependencyObject)
+            ?.DataContext as DocumentItem;
+    }
+
+    private void ConvertList_PreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (_isBusy || sender is not ListView list || list != _dragSourceList ||
+            e.LeftButton != MouseButtonState.Pressed || _draggedListItem is null)
+            return;
+
+        var current = e.GetPosition(list);
+        if (Math.Abs(current.X - _dragStartPoint.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(current.Y - _dragStartPoint.Y) < SystemParameters.MinimumVerticalDragDistance)
+            return;
+
+        var item = _draggedListItem;
+        DragDrop.DoDragDrop(list, item, DragDropEffects.Move);
+        _draggedListItem = null;
+        _dragSourceList = null;
+    }
+
+    private void ConvertList_DragOver(object sender, DragEventArgs e)
+    {
+        if (_isBusy || sender is not ListView list || list != _dragSourceList ||
+            !e.Data.GetDataPresent(typeof(DocumentItem)))
+        {
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+            return;
+        }
+
+        if (FindVisualParent<ListViewItem>(e.OriginalSource as DependencyObject)
+            ?.DataContext is DocumentItem target)
+            list.SelectedItem = target;
+        e.Effects = DragDropEffects.Move;
+        e.Handled = true;
+    }
+
+    private void ConvertList_Drop(object sender, DragEventArgs e)
+    {
+        if (_isBusy || sender is not ListView list || list != _dragSourceList ||
+            e.Data.GetData(typeof(DocumentItem)) is not DocumentItem source)
+            return;
+
+        var collection = list == MergeList ? _mergeFiles : _convertFiles;
+        var sourceIndex = collection.IndexOf(source);
+        if (sourceIndex < 0) return;
+
+        var targetContainer = FindVisualParent<ListViewItem>(e.OriginalSource as DependencyObject);
+        var target = targetContainer?.DataContext as DocumentItem;
+        var insertionIndex = target is null ? collection.Count : collection.IndexOf(target);
+        if (targetContainer is not null &&
+            e.GetPosition(targetContainer).Y > targetContainer.ActualHeight / 2)
+            insertionIndex++;
+        if (sourceIndex < insertionIndex) insertionIndex--;
+        insertionIndex = Math.Clamp(insertionIndex, 0, collection.Count - 1);
+
+        if (sourceIndex != insertionIndex)
+            collection.Move(sourceIndex, insertionIndex);
+        list.SelectedItem = source;
+        list.ScrollIntoView(source);
+        SetStatus($"已調整順序：{source.Name} 位於第 {insertionIndex + 1} 項");
+        e.Handled = true;
+    }
+
+    private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
+    {
+        while (child is not null)
+        {
+            if (child is T parent) return parent;
+            child = VisualTreeHelper.GetParent(child);
+        }
+        return null;
+    }
+
     private async void Convert_Click(object sender, RoutedEventArgs e)
     {
         if (_convertFiles.Count == 0)
@@ -234,6 +323,72 @@ public partial class MainWindow : Window
             await _pdfMergeService.MergeAsync(_mergeFiles.Select(x => x.Path).ToList(),
                 dialog.FileName, progress, token);
             SetStatus($"PDF 合併完成：{Path.GetFileName(dialog.FileName)}", true);
+        });
+    }
+
+    private async void OpenMarkdown_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isBusy) return;
+        var dialog = new OpenFileDialog
+        {
+            Title = "開啟 Markdown",
+            Filter = "Markdown (*.md;*.markdown)|*.md;*.markdown|文字文件 (*.txt)|*.txt",
+            Multiselect = false
+        };
+        if (dialog.ShowDialog() != true) return;
+
+        try
+        {
+            ExportPreview.Text = await File.ReadAllTextAsync(dialog.FileName);
+            _markdownSourcePath = dialog.FileName;
+            ExportPreviewMeta.Text =
+                $"{Path.GetFileName(dialog.FileName)} · {ExportPreview.Text.Length:N0} 字元";
+            SetStatus($"已開啟：{Path.GetFileName(dialog.FileName)}", true);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"無法開啟 Markdown：\n\n{ex.Message}", "Document Tailor",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void ExportPreview_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (ExportPreviewMeta is null || _markdownSourcePath is not null) return;
+        ExportPreviewMeta.Text = ExportPreview.Text.Length == 0
+            ? "可貼上內容或開啟 .md 檔"
+            : $"{ExportPreview.Text.Length:N0} 字元";
+    }
+
+    private async void ExportMarkdown_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isBusy || sender is not Button { Tag: string format }) return;
+        if (string.IsNullOrWhiteSpace(ExportPreview.Text))
+        {
+            ShowWarning("請先貼上內容或開啟一份 Markdown 文件。");
+            return;
+        }
+
+        var extension = "." + format;
+        var formatLabel = format.ToUpperInvariant();
+        var suggestedBase = _markdownSourcePath is null
+            ? $"Markdown輸出_{DateTime.Now:yyyyMMdd_HHmm}"
+            : Path.GetFileNameWithoutExtension(_markdownSourcePath);
+        var dialog = new SaveFileDialog
+        {
+            Title = $"輸出 {formatLabel}",
+            Filter = $"{formatLabel} 文件 (*{extension})|*{extension}",
+            FileName = suggestedBase + extension,
+            AddExtension = true,
+            DefaultExt = extension
+        };
+        if (dialog.ShowDialog() != true) return;
+
+        await RunOperationAsync(async (progress, token) =>
+        {
+            progress.Report($"正在產生 {formatLabel}…");
+            await _markdownExportService.ExportAsync(ExportPreview.Text, dialog.FileName, token);
+            SetStatus($"{formatLabel} 輸出完成：{Path.GetFileName(dialog.FileName)}", true);
         });
     }
 
