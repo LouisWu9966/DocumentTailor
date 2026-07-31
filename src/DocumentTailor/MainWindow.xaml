@@ -139,7 +139,7 @@
                                     <TextBlock Text="把零散文件，&#x0a;整理成清晰知識。"
                                                FontSize="46" FontWeight="SemiBold" LineHeight="56"
                                                TextWrapping="Wrap"/>
-                                    <TextBlock Text="Document Tailor 在本機解析 Word、掃描 PDF、圖片、Outlook MSG 與試算表，&#x0a;輸出乾淨 Markdown，並可再製成 HTML、DOCX 或 PDF。"
+                                    <TextBlock Text="Document Tailor 在本機解析 Word、掃描 PDF、Outlook MSG 與試算表，&#x0a;輸出乾淨 Markdown，並可再製成 HTML、DOCX 或 PDF。"
                                                Foreground="#94A5C2" FontSize="15" LineHeight="26" Margin="0,22,0,28"
                                                TextWrapping="Wrap"/>
                                     <StackPanel Orientation="Horizontal">
@@ -221,7 +221,7 @@
                                     <StackPanel>
                                         <TextBlock Text="01  FORMAT" Foreground="#57DEFA" FontSize="10" FontWeight="Bold"/>
                                         <TextBlock Text="文件整理成 Markdown" FontSize="17" FontWeight="SemiBold" Margin="0,13,0,8"/>
-                                        <TextBlock Text="混合匯入文件與圖片，掃描頁 OCR、郵件長尾清理，拖曳排序後彙整輸出。"
+                                        <TextBlock Text="混合匯入文件，支援掃描 PDF OCR、郵件長尾清理，拖曳排序後彙整輸出。"
                                                    Foreground="#A4B4CC" FontSize="12" TextWrapping="Wrap" LineHeight="20"/>
                                     </StackPanel>
                                 </Border>
