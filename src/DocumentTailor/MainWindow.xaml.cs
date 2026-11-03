@@ -22,6 +22,7 @@ public partial class MainWindow : Window
     private readonly PdfMergeService _pdfMergeService = new();
     private readonly OutlookDropService _outlookDropService = new();
     private readonly DispatcherTimer _heroTimer;
+    private bool _sharkEnabled;
     private CancellationTokenSource? _operationCancellation;
     private DocumentItem? _draggedListItem;
     private ListView? _dragSourceList;
@@ -37,12 +38,19 @@ public partial class MainWindow : Window
         Height = Math.Max(MinHeight, Math.Min(820, SystemParameters.WorkArea.Height - 24));
         ConvertList.ItemsSource = _convertFiles;
         MergeList.ItemsSource = _mergeFiles;
+        PdfEditPageList.ItemsSource = _pdfEditPages;
 
         _heroTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(20) };
         _heroTimer.Tick += AnimateHero;
         _heroTimer.Start();
         SizeChanged += (_, _) => UpdateResponsiveLayout();
-        Loaded += (_, _) => UpdateResponsiveLayout();
+        Loaded += (_, _) =>
+        {
+            UpdateResponsiveLayout();
+            SharkCursor.Attach(this);
+            _sharkEnabled = true;
+            UpdateSharkToggle();
+        };
         Closed += (_, _) =>
         {
             _heroTimer.Stop();
@@ -70,6 +78,17 @@ public partial class MainWindow : Window
         HomeVisualColumn.Width = singleColumn ? new GridLength(0) : new GridLength(.95, GridUnitType.Star);
         ConvertPreviewPanel.Visibility = singleColumn ? Visibility.Collapsed : Visibility.Visible;
         ConvertPreviewColumn.Width = singleColumn ? new GridLength(0) : new GridLength(1.05, GridUnitType.Star);
+
+        // The editor needs the page canvas above all else: the page list goes first on a
+        // narrow window, then the inspector, which is where the editing controls live.
+        var hidePageList = ActualWidth < 1040;
+        PdfEditPageListPanel.Visibility = hidePageList ? Visibility.Collapsed : Visibility.Visible;
+        PdfEditPageListColumn.Width = hidePageList ? new GridLength(0) : new GridLength(208);
+        var hideInspector = ActualWidth < 820;
+        PdfEditInspectorPanel.Visibility = hideInspector ? Visibility.Collapsed : Visibility.Visible;
+        PdfEditInspectorColumn.Width = hideInspector
+            ? new GridLength(0)
+            : new GridLength(ActualWidth < 1200 ? 272 : 310);
     }
 
     private void Nav_Click(object sender, RoutedEventArgs e)
@@ -77,6 +96,7 @@ public partial class MainWindow : Window
         if (sender == NavHome) ShowPage("home");
         else if (sender == NavConvert) ShowPage("convert");
         else if (sender == NavExport) ShowPage("export");
+        else if (sender == NavPdfEdit) ShowPage("pdfedit");
         else if (sender == NavMerge) ShowPage("merge");
     }
 
@@ -90,15 +110,18 @@ public partial class MainWindow : Window
         HomePage.Visibility = page == "home" ? Visibility.Visible : Visibility.Collapsed;
         ConvertPage.Visibility = page == "convert" ? Visibility.Visible : Visibility.Collapsed;
         ExportPage.Visibility = page == "export" ? Visibility.Visible : Visibility.Collapsed;
+        PdfEditorPage.Visibility = page == "pdfedit" ? Visibility.Visible : Visibility.Collapsed;
         MergePage.Visibility = page == "merge" ? Visibility.Visible : Visibility.Collapsed;
         NavHome.Tag = page == "home" ? "active" : null;
         NavConvert.Tag = page == "convert" ? "active" : null;
         NavExport.Tag = page == "export" ? "active" : null;
+        NavPdfEdit.Tag = page == "pdfedit" ? "active" : null;
         NavMerge.Tag = page == "merge" ? "active" : null;
         WindowSectionTitle.Text = page switch
         {
             "convert" => "文件轉 Markdown",
             "export" => "Markdown 再輸出",
+            "pdfedit" => "PDF 文字編輯",
             "merge" => "PDF 合併",
             _ => "首頁"
         };
@@ -343,12 +366,13 @@ public partial class MainWindow : Window
         };
         if (dialog.ShowDialog() != true) return;
 
-        await RunOperationAsync(async (progress, token) =>
-        {
-            await _pdfMergeService.MergeAsync(_mergeFiles.Select(x => x.Path).ToList(),
-                dialog.FileName, progress, token);
-            SetStatus($"PDF 合併完成：{Path.GetFileName(dialog.FileName)}", true);
-        });
+        if (await RunOperationAsync(async (progress, token) =>
+            {
+                await _pdfMergeService.MergeAsync(_mergeFiles.Select(x => x.Path).ToList(),
+                    dialog.FileName, progress, token);
+                SetStatus($"PDF 合併完成：{Path.GetFileName(dialog.FileName)}", true);
+            }))
+            ShowOutputComplete(dialog.FileName);
     }
 
     private async void OpenMarkdown_Click(object sender, RoutedEventArgs e)
@@ -409,27 +433,31 @@ public partial class MainWindow : Window
         };
         if (dialog.ShowDialog() != true) return;
 
-        await RunOperationAsync(async (progress, token) =>
-        {
-            progress.Report($"正在產生 {formatLabel}…");
-            await _markdownExportService.ExportAsync(ExportPreview.Text, dialog.FileName, token);
-            SetStatus($"{formatLabel} 輸出完成：{Path.GetFileName(dialog.FileName)}", true);
-        });
+        if (await RunOperationAsync(async (progress, token) =>
+            {
+                progress.Report($"正在產生 {formatLabel}…");
+                await _markdownExportService.ExportAsync(ExportPreview.Text, dialog.FileName, token);
+                SetStatus($"{formatLabel} 輸出完成：{Path.GetFileName(dialog.FileName)}", true);
+            }))
+            ShowOutputComplete(dialog.FileName);
     }
 
-    private async Task RunOperationAsync(Func<IProgress<string>, CancellationToken, Task> operation)
+    /// <summary>Runs a cancellable operation. Returns false if it was cancelled or failed.</summary>
+    private async Task<bool> RunOperationAsync(Func<IProgress<string>, CancellationToken, Task> operation)
     {
-        if (_isBusy) return;
+        if (_isBusy) return false;
         _isBusy = true;
         _operationCancellation = new CancellationTokenSource();
         BusyProgress.Visibility = Visibility.Visible;
         CancelOperationButton.Visibility = Visibility.Visible;
         StatusDot.Fill = new SolidColorBrush(Color.FromRgb(40, 215, 255));
         var progress = new Progress<string>(message => SetStatus(message));
+        var completed = false;
 
         try
         {
             await operation(progress, _operationCancellation.Token);
+            completed = true;
         }
         catch (OperationCanceledException)
         {
@@ -450,6 +478,48 @@ public partial class MainWindow : Window
             _operationCancellation.Dispose();
             _operationCancellation = null;
         }
+
+        return completed;
+    }
+
+    /// <summary>
+    /// Confirms a finished export. Shown after the operation ends, never inside it, so
+    /// the progress bar is already gone when the dialog appears.
+    /// </summary>
+    private static void ShowOutputComplete(string outputPath, IReadOnlyList<string>? notes = null)
+    {
+        var message = new StringBuilder();
+        message.Append("輸出完成：").AppendLine(Path.GetFileName(outputPath));
+
+        var info = new FileInfo(outputPath);
+        if (info.Exists) message.Append("檔案大小：").AppendLine(FormatFileSize(info.Length));
+        message.AppendLine();
+        message.AppendLine(outputPath);
+
+        var caption = "Document Tailor";
+        if (notes is { Count: > 0 })
+        {
+            message.AppendLine();
+            message.AppendLine("請注意：");
+            foreach (var note in notes) message.AppendLine().Append("・").AppendLine(note);
+            caption = "輸出完成，有幾點請注意";
+        }
+
+        MessageBox.Show(message.ToString().TrimEnd(), caption,
+            MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private static string FormatFileSize(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB"];
+        double size = bytes;
+        var unit = 0;
+        while (size >= 1024 && unit < units.Length - 1)
+        {
+            size /= 1024;
+            unit++;
+        }
+        return $"{size:0.#} {units[unit]}";
     }
 
     private static string? AskMarkdownOutput(string suggestedName)
@@ -472,6 +542,22 @@ public partial class MainWindow : Window
         mode == "merge" ? MergeList : ConvertList;
 
     private void CancelOperation_Click(object sender, RoutedEventArgs e) => _operationCancellation?.Cancel();
+
+    private void SharkToggle_Click(object sender, RoutedEventArgs e)
+    {
+        _sharkEnabled = !_sharkEnabled;
+        if (_sharkEnabled) SharkCursor.Attach(this);
+        else SharkCursor.Detach();
+        UpdateSharkToggle();
+    }
+
+    private void UpdateSharkToggle()
+    {
+        SharkToggle.Foreground = new SolidColorBrush(_sharkEnabled
+            ? Color.FromRgb(0x66, 0xE5, 0xFF)
+            : Color.FromRgb(0x5C, 0x6B, 0x83));
+        SharkToggle.ToolTip = _sharkEnabled ? "關閉鯊魚游標" : "開啟鯊魚游標";
+    }
 
     private void SetStatus(string message, bool success = false)
     {

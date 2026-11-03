@@ -22,5 +22,11 @@ Desktop.ini
 
 # Local logs and temporary files
 *.log
+build-test-log.txt
 *.tmp
 *.bak
+
+# Local release/debug scratch
+release-log.txt
+_replaced/
+build-test.cmd

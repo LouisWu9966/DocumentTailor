@@ -1,3 +1,4 @@
+using DocumentTailor.Services.Pdf;
 using System.Text;
 using Windows.Data.Pdf;
 using Windows.Globalization;
@@ -72,10 +73,57 @@ public sealed class WindowsOcrService
         var output = new StringBuilder();
         foreach (var line in result.Lines)
         {
-            var text = string.Join(" ", line.Words.Select(word => word.Text)).Trim();
+            var text = LineText(line);
             if (text.Length > 0) output.AppendLine(text);
         }
         return output.ToString().Trim();
+    }
+
+    /// <summary>
+    /// Recognises a page and keeps each line's pixel bounding box, which is what the
+    /// PDF text editor needs in order to cover the old pixels and redraw in place.
+    /// </summary>
+    public async Task<IReadOnlyList<OcrLineBox>> RecognizeLinesAsync(
+        SoftwareBitmap bitmap, CancellationToken cancellationToken = default)
+    {
+        var engine = CreateEngine();
+        cancellationToken.ThrowIfCancellationRequested();
+        var result = await engine.RecognizeAsync(bitmap);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var lines = new List<OcrLineBox>();
+        foreach (var line in result.Lines)
+        {
+            var text = LineText(line);
+            if (text.Length == 0 || line.Words.Count == 0) continue;
+
+            var left = double.MaxValue;
+            var top = double.MaxValue;
+            var right = double.MinValue;
+            var bottom = double.MinValue;
+            foreach (var word in line.Words)
+            {
+                var box = word.BoundingRect;
+                left = Math.Min(left, box.Left);
+                top = Math.Min(top, box.Top);
+                right = Math.Max(right, box.Right);
+                bottom = Math.Max(bottom, box.Bottom);
+            }
+            if (right <= left || bottom <= top) continue;
+            lines.Add(new OcrLineBox(text, left, top, right - left, bottom - top));
+        }
+        return lines;
+    }
+
+    /// <summary>The engine's largest accepted bitmap edge, in pixels.</summary>
+    public static int MaxImageDimension => (int)OcrEngine.MaxImageDimension;
+
+    private static string LineText(OcrLine line)
+    {
+        var text = line.Text;
+        if (string.IsNullOrWhiteSpace(text))
+            text = string.Join(" ", line.Words.Select(word => word.Text));
+        return text.Trim();
     }
 
     private static OcrEngine CreateEngine()

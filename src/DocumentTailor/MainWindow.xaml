@@ -1,6 +1,7 @@
 <Window x:Class="DocumentTailor.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:DocumentTailor"
         Title="Document Tailor" Width="1280" Height="820" MinWidth="640" MinHeight="520"
         WindowStartupLocation="CenterScreen" WindowStyle="None" ResizeMode="CanResize"
         Background="#09101A" FontFamily="Segoe UI, Microsoft JhengHei UI"
@@ -29,6 +30,30 @@
                 </StackPanel>
                 <TextBlock Grid.Column="2" Text="{Binding SizeLabel}" Foreground="#8292AD"
                            FontSize="11" VerticalAlignment="Center"/>
+            </Grid>
+        </DataTemplate>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+        <DataTemplate x:Key="PdfPageTemplate">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Border Width="30" Height="30" CornerRadius="8" Background="#263B53" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding PageNumber}" Foreground="#66E5FF" FontWeight="Bold"
+                               FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel Grid.Column="1" Margin="10,0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Label}" FontSize="12"/>
+                    <TextBlock Text="{Binding StatusLabel}" Foreground="#7F91AE" FontSize="10"
+                               TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+                </StackPanel>
+                <Border Grid.Column="2" Background="#1B3A2C" CornerRadius="7" Padding="7,2"
+                        VerticalAlignment="Center"
+                        Visibility="{Binding HasEdits, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Text="已改" Foreground="#6FE8A8" FontSize="9" FontWeight="SemiBold"/>
+                </Border>
             </Grid>
         </DataTemplate>
     </Window.Resources>
@@ -65,6 +90,8 @@
                     <Button Content="轉 MD" Tag="convert" Click="CompactNav_Click" ToolTip="文件轉 Markdown"
                             Background="Transparent" Foreground="#8293AE" BorderThickness="0" Padding="10,4"/>
                     <Button Content="再輸出" Tag="export" Click="CompactNav_Click" ToolTip="Markdown 再輸出"
+                            Background="Transparent" Foreground="#8293AE" BorderThickness="0" Padding="10,4"/>
+                    <Button Content="編輯" Tag="pdfedit" Click="CompactNav_Click" ToolTip="PDF 文字編輯"
                             Background="Transparent" Foreground="#8293AE" BorderThickness="0" Padding="10,4"/>
                     <Button Content="合併" Tag="merge" Click="CompactNav_Click" ToolTip="PDF 合併"
                             Background="Transparent" Foreground="#8293AE" BorderThickness="0" Padding="10,4"/>
@@ -103,6 +130,8 @@
                                     Click="Nav_Click" Content="◇   文件轉 Markdown"/>
                             <Button x:Name="NavExport" Style="{StaticResource NavButton}"
                                     Click="Nav_Click" Content="↗   Markdown 再輸出"/>
+                            <Button x:Name="NavPdfEdit" Style="{StaticResource NavButton}"
+                                    Click="Nav_Click" Content="✎   PDF 文字編輯"/>
                             <Button x:Name="NavMerge" Style="{StaticResource NavButton}"
                                     Click="Nav_Click" Content="⊞   PDF 合併"/>
                         </StackPanel>
@@ -146,7 +175,9 @@
                                         <Button Style="{StaticResource PrimaryButton}" Content="開始轉換  →"
                                                 Tag="convert" Click="HomeAction_Click" Margin="0,0,12,0"/>
                                         <Button Style="{StaticResource GhostButton}" Content="Markdown 再輸出"
-                                                Tag="export" Click="HomeAction_Click"/>
+                                                Tag="export" Click="HomeAction_Click" Margin="0,0,12,0"/>
+                                        <Button Style="{StaticResource GhostButton}" Content="PDF 文字編輯"
+                                                Tag="pdfedit" Click="HomeAction_Click"/>
                                     </StackPanel>
                                 </StackPanel>
 
@@ -208,10 +239,11 @@
                                 </Border>
                             </Grid>
 
-                            <TextBlock Text="三個核心工作流，一個乾淨工作區" FontSize="22" FontWeight="SemiBold"
+                            <TextBlock Text="四個核心工作流，一個乾淨工作區" FontSize="22" FontWeight="SemiBold"
                                        Margin="8,30,0,16"/>
                             <Grid Margin="0,0,0,20">
                                 <Grid.ColumnDefinitions>
+                                    <ColumnDefinition/>
                                     <ColumnDefinition/>
                                     <ColumnDefinition/>
                                     <ColumnDefinition/>
@@ -234,10 +266,19 @@
                                                    Foreground="#A4B4CC" FontSize="12" TextWrapping="Wrap" LineHeight="20"/>
                                     </StackPanel>
                                 </Border>
-                                <Border Grid.Column="2" Margin="12,0,0,0" Background="#111B2A" BorderBrush="#22334D"
+                                <Border Grid.Column="2" Margin="6,0,0,0" Background="#111B2A" BorderBrush="#22334D"
                                         BorderThickness="1" CornerRadius="16" Padding="20">
                                     <StackPanel>
-                                        <TextBlock Text="03  COMBINE" Foreground="#65E6AD" FontSize="10" FontWeight="Bold"/>
+                                        <TextBlock Text="03  EDIT" Foreground="#FFB86C" FontSize="10" FontWeight="Bold"/>
+                                        <TextBlock Text="PDF 文字編輯" FontSize="17" FontWeight="SemiBold" Margin="0,13,0,8"/>
+                                        <TextBlock Text="掃描 PDF 以 OCR 取出文字逐行修改，只重繪改過的字，圖像與圖表排版保持原樣。"
+                                                   Foreground="#A4B4CC" FontSize="12" TextWrapping="Wrap" LineHeight="20"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Grid.Column="3" Margin="12,0,0,0" Background="#111B2A" BorderBrush="#22334D"
+                                        BorderThickness="1" CornerRadius="16" Padding="20">
+                                    <StackPanel>
+                                        <TextBlock Text="04  COMBINE" Foreground="#65E6AD" FontSize="10" FontWeight="Bold"/>
                                         <TextBlock Text="PDF 自由合併" FontSize="17" FontWeight="SemiBold" Margin="0,13,0,8"/>
                                         <TextBlock Text="拖放多份 PDF、調整順序，再輸出成單一文件。"
                                                    Foreground="#A4B4CC" FontSize="12" TextWrapping="Wrap" LineHeight="20"/>
@@ -386,6 +427,190 @@
                         </Grid>
                     </Grid>
 
+                    <!-- PDF text editing page -->
+                    <Grid x:Name="PdfEditorPage" Visibility="Collapsed">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Grid Margin="4,0,4,16">
+                            <StackPanel>
+                                <TextBlock Text="PDF 文字編輯" FontSize="30" FontWeight="SemiBold"/>
+                                <TextBlock x:Name="PdfEditSubtitle"
+                                           Text="開啟掃描 PDF，以離線 OCR 取出每一行文字後直接修改；只有改過的行會被重繪，圖像與圖表排版維持原檔。"
+                                           Foreground="#8495B1" FontSize="13" Margin="0,8,0,0" TextWrapping="Wrap"
+                                           MaxWidth="820" HorizontalAlignment="Left"/>
+                            </StackPanel>
+                            <Button HorizontalAlignment="Right" VerticalAlignment="Center"
+                                    Style="{StaticResource GhostButton}" Content="開啟 PDF"
+                                    Click="PdfEditOpen_Click"/>
+                        </Grid>
+                        <Grid Grid.Row="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition x:Name="PdfEditPageListColumn" Width="208"/>
+                                <ColumnDefinition Width="14"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="14"/>
+                                <ColumnDefinition x:Name="PdfEditInspectorColumn" Width="310"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Page list -->
+                            <Border x:Name="PdfEditPageListPanel" Background="#0E1724" BorderBrush="#21324B"
+                                    BorderThickness="1" CornerRadius="16" Padding="12">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Text="頁面" Foreground="#7C8FAC" FontSize="10" FontWeight="Bold"
+                                               Margin="4,2,0,10"/>
+                                    <ListView Grid.Row="1" x:Name="PdfEditPageList" SelectionMode="Single"
+                                              ItemTemplate="{StaticResource PdfPageTemplate}"
+                                              SelectionChanged="PdfEditPageList_SelectionChanged"/>
+                                </Grid>
+                            </Border>
+
+                            <!-- Page canvas -->
+                            <Border Grid.Column="2" Background="#0E1724" BorderBrush="#21324B"
+                                    BorderThickness="1" CornerRadius="16" Padding="12">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid Margin="4,0,4,10">
+                                        <TextBlock x:Name="PdfEditCanvasMeta" Text="尚未開啟 PDF"
+                                                   Foreground="#8495B1" FontSize="11" VerticalAlignment="Center"/>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                            <Button Content="−" Width="30" Padding="0,2" ToolTip="縮小"
+                                                    Style="{StaticResource GhostButton}" Tag="out"
+                                                    Click="PdfEditZoom_Click" Margin="0,0,6,0"/>
+                                            <TextBlock x:Name="PdfEditZoomLabel" Text="100%" Foreground="#8495B1"
+                                                       FontSize="11" VerticalAlignment="Center" Width="42"
+                                                       TextAlignment="Center"/>
+                                            <Button Content="+" Width="30" Padding="0,2" ToolTip="放大"
+                                                    Style="{StaticResource GhostButton}" Tag="in"
+                                                    Click="PdfEditZoom_Click" Margin="6,0,0,0"/>
+                                            <Button Content="符合視窗" Padding="10,2" Margin="6,0,0,0"
+                                                    Style="{StaticResource GhostButton}" Tag="fit"
+                                                    Click="PdfEditZoom_Click"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <ScrollViewer Grid.Row="1" x:Name="PdfEditScroll" Background="#070C14"
+                                                  HorizontalScrollBarVisibility="Auto"
+                                                  VerticalScrollBarVisibility="Auto">
+                                        <Grid x:Name="PdfEditCanvasHost" HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" Margin="16">
+                                            <Image x:Name="PdfEditPageImage" Stretch="Fill"
+                                                   RenderOptions.BitmapScalingMode="HighQuality"/>
+                                            <Canvas x:Name="PdfEditOverlay" Background="Transparent"/>
+                                        </Grid>
+                                    </ScrollViewer>
+                                </Grid>
+                            </Border>
+
+                            <!-- Inspector -->
+                            <Border Grid.Column="4" x:Name="PdfEditInspectorPanel" Background="#111B2A"
+                                    BorderBrush="#22334D" BorderThickness="1" CornerRadius="16" Padding="16">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <StackPanel>
+                                        <TextBlock Text="選取的文字行" FontSize="15" FontWeight="SemiBold"/>
+                                        <TextBlock x:Name="PdfEditBlockMeta" Text="在頁面上點選要修改的文字行。"
+                                                   Foreground="#A4B4CC" FontSize="11" Margin="0,6,0,10"
+                                                   TextWrapping="Wrap" LineHeight="18"/>
+                                        <TextBox x:Name="PdfEditBlockText" AcceptsReturn="False" Height="84"
+                                                 TextWrapping="Wrap" Padding="10" IsEnabled="False"
+                                                 VerticalScrollBarVisibility="Auto"
+                                                 TextChanged="PdfEditBlockText_TextChanged"/>
+                                        <TextBlock x:Name="PdfEditOriginalText" Foreground="#6F8099" FontSize="10"
+                                                   Margin="0,8,0,0" TextWrapping="Wrap" LineHeight="16"/>
+
+                                        <Grid Margin="0,14,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="8"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel>
+                                                <TextBlock Text="字級" Foreground="#8FA3BE" FontSize="10"
+                                                           FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                                <TextBox x:Name="PdfEditFontSize" Padding="8" IsEnabled="False"
+                                                         TextChanged="PdfEditFontSize_TextChanged"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2">
+                                                <TextBlock Text="對齊" Foreground="#8FA3BE" FontSize="10"
+                                                           FontWeight="SemiBold" Margin="0,0,0,5"/>
+                                                <ComboBox x:Name="PdfEditAlign" IsEnabled="False"
+                                                          SelectionChanged="PdfEditAlign_SelectionChanged">
+                                                    <ComboBoxItem Content="靠左" IsSelected="True"/>
+                                                    <ComboBoxItem Content="置中"/>
+                                                    <ComboBoxItem Content="靠右"/>
+                                                </ComboBox>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <TextBlock Text="底色處理" Foreground="#8FA3BE" FontSize="10"
+                                                   FontWeight="SemiBold" Margin="0,14,0,5"/>
+                                        <ComboBox x:Name="PdfEditFillMode" IsEnabled="False"
+                                                  SelectionChanged="PdfEditFillMode_SelectionChanged">
+                                            <ComboBoxItem Content="自動取樣底色" IsSelected="True"/>
+                                            <ComboBoxItem Content="強制填色"/>
+                                            <ComboBoxItem Content="不填色（保留線條）"/>
+                                        </ComboBox>
+                                        <TextBlock x:Name="PdfEditFillHint" Foreground="#C9A227" FontSize="10"
+                                                   Margin="0,6,0,0" TextWrapping="Wrap" LineHeight="16"/>
+
+                                        <TextBlock Text="框寬 / 框高（pt）" Foreground="#8FA3BE" FontSize="10"
+                                                   FontWeight="SemiBold" Margin="0,14,0,5"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="8"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox x:Name="PdfEditBoxWidth" Padding="8" IsEnabled="False"
+                                                     TextChanged="PdfEditBoxSize_TextChanged"/>
+                                            <TextBox Grid.Column="2" x:Name="PdfEditBoxHeight" Padding="8"
+                                                     IsEnabled="False" TextChanged="PdfEditBoxSize_TextChanged"/>
+                                        </Grid>
+                                        <TextBlock Text="在頁面上直接拖曳文字框可調整位置。" Foreground="#6F8099"
+                                                   FontSize="10" Margin="0,6,0,0" TextWrapping="Wrap"/>
+
+                                        <Button x:Name="PdfEditResetBlock" Style="{StaticResource GhostButton}"
+                                                Content="還原這一行（文字與框位置）" Margin="0,14,0,0" IsEnabled="False"
+                                                Click="PdfEditResetBlock_Click"/>
+
+                                        <Border Background="#0E1724" BorderBrush="#22334D" BorderThickness="1"
+                                                CornerRadius="12" Padding="14" Margin="0,20,0,0">
+                                            <StackPanel>
+                                                <TextBlock Text="輸出設定" FontSize="13" FontWeight="SemiBold"/>
+                                                <TextBlock Text="輸出模式" Foreground="#8FA3BE" FontSize="10"
+                                                           FontWeight="SemiBold" Margin="0,12,0,5"/>
+                                                <ComboBox x:Name="PdfEditModeSelector"
+                                                          SelectionChanged="PdfEditOutputMode_SelectionChanged">
+                                                    <ComboBoxItem Content="疊畫（保留原件最完整）" IsSelected="True"/>
+                                                    <ComboBoxItem Content="移除原文字（文字層頁面）"/>
+                                                    <ComboBoxItem Content="點陣化（最徹底）"/>
+                                                </ComboBox>
+                                                <TextBlock x:Name="PdfEditModeHint" Foreground="#8495B1" FontSize="10"
+                                                           Margin="0,7,0,0" TextWrapping="Wrap" LineHeight="16"/>
+                                                <CheckBox x:Name="PdfEditSearchable" Content="加入可搜尋文字層（實驗）"
+                                                          Foreground="#C6D4EA" FontSize="11" Margin="0,12,0,0"/>
+                                                <CheckBox x:Name="PdfEditDiagnostics" Content="輸出偵測框（對位檢查）"
+                                                          Foreground="#C6D4EA" FontSize="11" Margin="0,8,0,0"/>
+                                                <Button x:Name="PdfEditExport" Style="{StaticResource PrimaryButton}"
+                                                        Content="輸出編輯後 PDF  →" Margin="0,16,0,0"
+                                                        IsEnabled="False" Click="PdfEditExport_Click"/>
+                                                <TextBlock x:Name="PdfEditSummary" Foreground="#8495B1" FontSize="10"
+                                                           Margin="0,10,0,0" TextWrapping="Wrap" LineHeight="16"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </Border>
+                        </Grid>
+                    </Grid>
+
                     <!-- Merge page -->
                     <Grid x:Name="MergePage" Visibility="Collapsed">
                         <Grid.RowDefinitions>
@@ -459,20 +684,30 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="v1.2.1" Foreground="#8FA0BB" Margin="20,0" VerticalAlignment="Center" FontSize="10"/>
+                <TextBlock Text="v1.3.0" Foreground="#8FA0BB" Margin="20,0" VerticalAlignment="Center" FontSize="10"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                     <Ellipse x:Name="StatusDot" Width="6" Height="6" Fill="#42E49A" Margin="14,0,8,0"/>
                     <TextBlock x:Name="StatusText" Text="準備完成" Foreground="#7889A5" FontSize="10"/>
                     <ProgressBar x:Name="BusyProgress" Width="110" Height="3" IsIndeterminate="True"
                                  Visibility="Collapsed" Margin="16,0,0,0"/>
                 </StackPanel>
-                <TextBlock Grid.Column="2" Text="資訊部 Louis" Foreground="#7A8CA8"
-                           FontSize="10" VerticalAlignment="Center" Margin="14,0,16,0"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="SharkToggle" Content="🦈  鯊魚游標" Click="SharkToggle_Click"
+                            Background="Transparent" Foreground="#66E5FF" BorderThickness="0"
+                            FontSize="10" Cursor="Hand" Padding="8,2"/>
+                    <TextBlock Text="資訊部 Louis" Foreground="#7A8CA8"
+                               FontSize="10" VerticalAlignment="Center" Margin="14,0,16,0"/>
+                </StackPanel>
                 <Button Grid.Column="3" x:Name="CancelOperationButton" Content="取消作業"
                         Visibility="Collapsed" Click="CancelOperation_Click"
                         Background="Transparent" Foreground="#FF8AA5" BorderThickness="0"
                         Margin="0,0,16,0" FontSize="10" Cursor="Hand"/>
             </Grid>
+
+            <!-- Signature shark cursor: must be the last child so it sits on top,
+                 and must span every row or it would only cover the title bar. -->
+            <local:DotMatrixSharkCursor x:Name="SharkCursor" Grid.Row="0" Grid.RowSpan="3"
+                                        Label="LouisTool" Kind="hammerhead" Length="220"/>
         </Grid>
     </Border>
 </Window>

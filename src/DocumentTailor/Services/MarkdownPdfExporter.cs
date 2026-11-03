@@ -1,5 +1,5 @@
+using DocumentTailor.Services.Pdf;
 using PdfSharpCore.Drawing;
-using PdfSharpCore.Fonts;
 using PdfSharpCore.Pdf;
 using System.Globalization;
 using System.Text;
@@ -13,14 +13,12 @@ internal sealed class MarkdownPdfExporter
     private const double MarginX = 58;
     private const double TopMargin = 58;
     private const double BottomMargin = 58;
-    private const string BodyFont = "DocumentTailor CJK";
-    private const string CodeFont = "Consolas";
-    private static readonly object FontLock = new();
-    private static bool _fontResolverConfigured;
+    private const string BodyFont = PdfFontRegistry.BodyFont;
+    private const string CodeFont = PdfFontRegistry.CodeFont;
 
     public void Export(ParsedMarkdownDocument source, string outputPath)
     {
-        EnsureFontResolver();
+        PdfFontRegistry.Ensure();
         using var document = new PdfDocument();
         document.Info.Title = source.Title;
         document.Info.Creator = "Document Tailor";
@@ -71,74 +69,6 @@ internal sealed class MarkdownPdfExporter
 
         writer.Complete();
         document.Save(outputPath);
-    }
-
-    private static void EnsureFontResolver()
-    {
-        if (_fontResolverConfigured) return;
-        lock (FontLock)
-        {
-            if (_fontResolverConfigured) return;
-            GlobalFontSettings.FontResolver = new WindowsCjkFontResolver();
-            _fontResolverConfigured = true;
-        }
-    }
-
-    private sealed class WindowsCjkFontResolver : IFontResolver
-    {
-        private const string RegularFace = "DocumentTailorCjkRegular";
-        private const string BoldFace = "DocumentTailorCjkBold";
-        private const string CodeFace = "DocumentTailorCode";
-        private static readonly string FontDirectory =
-            Environment.GetFolderPath(Environment.SpecialFolder.Fonts);
-
-        public string DefaultFontName => BodyFont;
-
-        public byte[] GetFont(string faceName)
-        {
-            string[] candidates = faceName switch
-            {
-                BoldFace =>
-                [
-                    "DENGB.TTF",
-                    "NotoSansTC-VF.ttf",
-                    "kaiu.ttf",
-                    "msjhbd.ttc"
-                ],
-                CodeFace =>
-                [
-                    "NotoSansTC-VF.ttf",
-                    "kaiu.ttf",
-                    "DENG.TTF",
-                    "msjh.ttc",
-                    "consola.ttf"
-                ],
-                _ =>
-                [
-                    "NotoSansTC-VF.ttf",
-                    "kaiu.ttf",
-                    "msjh.ttc",
-                    "DENG.TTF"
-                ]
-            };
-
-            foreach (var fileName in candidates)
-            {
-                var path = Path.Combine(FontDirectory, fileName);
-                if (File.Exists(path)) return File.ReadAllBytes(path);
-            }
-            throw new InvalidOperationException(
-                "找不到可用的中文字型。請安裝「微軟正黑體」或 Noto Sans TC。");
-        }
-
-        public FontResolverInfo ResolveTypeface(
-            string familyName, bool isBold, bool isItalic)
-        {
-            if (familyName.Equals(CodeFont, StringComparison.OrdinalIgnoreCase))
-                return new FontResolverInfo(CodeFace, false, isItalic);
-            return new FontResolverInfo(
-                isBold ? BoldFace : RegularFace, false, isItalic);
-        }
     }
 
     private sealed class PdfWriter : IDisposable
